@@ -219,11 +219,27 @@ export default function SnakeShop({ onClose, onEquipSkin }) {
     finally { setLoading(false); }
   };
 
-  const owned    = (id) => userSkins.some(us => us.skinId === id);
+  // localStorage fallback para skins desbloqueadas sin backend
+  const LS_KEY = 'arachiz_unlocked_skins';
+  const getLocalUnlocked = () => { try { return JSON.parse(localStorage.getItem(LS_KEY)) || []; } catch { return []; } };
+  const addLocalUnlocked = (skinId) => {
+    const list = getLocalUnlocked();
+    if (!list.includes(skinId)) { list.push(skinId); localStorage.setItem(LS_KEY, JSON.stringify(list)); }
+  };
+
+  const owned    = (id) => userSkins.some(us => us.skinId === id) || getLocalUnlocked().includes(id);
   const equipped = (id) => userSkins.some(us => us.skinId === id && us.equipped);
 
   const handleEquip = async (skinId) => {
     try {
+      // Si es skin local (backend no disponible), solo actualizar UI
+      if (skinId.startsWith('local-')) {
+        const skin = allSkins.find(s => s.id === skinId);
+        if (skin && onEquipSkin) onEquipSkin(skin);
+        // Marcar como equipada localmente
+        setUserSkins(prev => prev.map(us => ({ ...us, equipped: false })));
+        return;
+      }
       await fetch(`${API_URL}/skins/equip`, {
         method:'POST',
         headers:{ 'Content-Type':'application/json', Authorization:`Bearer ${token}` },
@@ -239,16 +255,27 @@ export default function SnakeShop({ onClose, onEquipSkin }) {
     if (processing) return;
     setProcessing(true);
     try {
-      const res  = await fetch(`${API_URL}/skins/create-order`, {
-        method:'POST',
-        headers:{ 'Content-Type':'application/json', Authorization:`Bearer ${token}` },
+      // Intentar desbloquear en el backend
+      const res = await fetch(`${API_URL}/skins/unlock`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ skinId: skin.id }),
       });
-      const data = await res.json();
-      if (res.ok && data.paymentUrl) window.location.href = data.paymentUrl;
-      else alert(data.error || 'Error al procesar el pago');
-    } catch (e) { alert('Error al procesar el pago'); }
-    finally { setProcessing(false); }
+      if (res.ok) {
+        // Si el backend respondió bien, recargar skins del servidor
+        await loadSkins();
+      } else {
+        // Fallback: guardar en localStorage y refrescar UI
+        addLocalUnlocked(skin.id);
+        await loadSkins();
+      }
+    } catch (e) {
+      // Sin conexión al backend — guardar local
+      addLocalUnlocked(skin.id);
+      await loadSkins();
+    } finally {
+      setProcessing(false);
+    }
   };
 
   const visible = allSkins.filter(s => {
@@ -365,7 +392,7 @@ export default function SnakeShop({ onClose, onEquipSkin }) {
                         style={{ background: skin.price === 0 ? 'linear-gradient(135deg,#00ff88,#00cc6a)' : 'linear-gradient(135deg,#f093fb,#f5576c)', border:'none', borderRadius:12, color: skin.price === 0 ? '#000' : 'white', padding:'8px 18px', cursor:'pointer', fontSize:13, fontWeight:700, opacity: processing ? 0.6 : 1, transition:'all 0.2s' }}
                         onMouseEnter={e => { if (!processing) e.currentTarget.style.transform='scale(1.05)'; }}
                         onMouseLeave={e => e.currentTarget.style.transform='scale(1)'}>
-                        {skin.price === 0 ? 'Obtener' : processing ? 'Procesando...' : '💳 Comprar'}
+                        {skin.price === 0 ? 'Obtener' : processing ? 'Desbloqueando...' : '🔓 Obtener'}
                       </button>
                     )}
                   </div>
