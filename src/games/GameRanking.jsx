@@ -9,8 +9,7 @@ export default function GameRanking({ lb = [], game = '', maxHeight = 400 }) {
   const lowerBetter = LOWER_IS_BETTER.includes(game);
 
   const formatScore = (score) => {
-    if (game === 'reaction') return `${score} ms`;
-    if (game === 'wordle')   return `${score} intentos`;
+    if (game === 'wordle') return `${score} intentos`;
     return `${score} pts`;
   };
 
