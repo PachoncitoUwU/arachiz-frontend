@@ -154,12 +154,19 @@ export default function ReactionTime({ onClose, currentUser }) {
     if (phase === 'done' && scoreRef.current > 0) {
       const name   = currentUser?.fullName || 'Jugador';
       const avatar = currentUser?.avatarUrl || null;
-      // Guardar local inmediatamente
+      // Guardar local inmediatamente (solo si es mejor)
       const updated = saveLocalScore(scoreRef.current, name, avatar);
       setLb(updated);
-      // Guardar en backend y refrescar desde backend
-      trySaveBackend(scoreRef.current);
-      setTimeout(() => fetchBackendLB().then(lb => setLb(lb)), 1500);
+      // Solo enviar al backend si este score es el mejor local del usuario
+      const localBest = updated.find(e => e.name === name);
+      if (localBest && localBest.score === scoreRef.current) {
+        // Es el mejor — enviar al backend
+        trySaveBackend(scoreRef.current);
+        setTimeout(() => fetchBackendLB().then(lb => setLb(lb)), 1500);
+      } else {
+        // No es el mejor — solo refrescar el ranking sin enviar
+        setTimeout(() => fetchBackendLB().then(lb => setLb(lb)), 500);
+      }
     }
   }, [phase, currentUser]);
 
