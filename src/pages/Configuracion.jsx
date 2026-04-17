@@ -1316,7 +1316,7 @@ function SnakeGame({ onClose, currentUser }) {
                 <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.5)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1000}} onClick={()=>setShowColorPicker(false)}>
                   <div style={{background:'white',borderRadius:16,padding:20,maxWidth:300}} onClick={e=>e.stopPropagation()}>
                     <h3 style={{margin:'0 0 15px',fontSize:16,fontWeight:700}}>Elige un color</h3>
-                    <input type="color" value={snakeColor} onChange={e=>{ setSnakeColor(e.target.value); snakeColorRef.current=e.target.value; equippedSkinRef.current=null; setEquippedSkin(null); }}}
+                    <input type="color" value={snakeColor} onChange={e=>{ setSnakeColor(e.target.value); snakeColorRef.current=e.target.value; equippedSkinRef.current=null; setEquippedSkin(null); }}
                       style={{width:'100%',height:40,border:'none',borderRadius:8,cursor:'pointer'}}/>
                     <div style={{display:'flex',gap:8,marginTop:15,justifyContent:'flex-end'}}>
                       <button onClick={()=>setShowColorPicker(false)}
