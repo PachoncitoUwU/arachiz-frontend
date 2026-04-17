@@ -1,63 +1,137 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import GameRanking from './GameRanking';
-import { fetchLB, saveGameScore, getCachedLB, glassLight, overlayStyle } from './gameUtils';
+import { glassLight, overlayStyle, MEDAL, TOP_COLORS } from './gameUtils';
 
-const GAME_DURATION = 10; // segundos
+const GAME_DURATION = 10;
+const LS_KEY = 'arachiz_reaction_lb_local';
 
-// Genera posición aleatoria dentro del área de juego (evita bordes)
-const randPos = (areaW, areaH, r) => ({
-  x: r + Math.random() * (areaW - r * 2),
-  y: r + Math.random() * (areaH - r * 2),
-});
+// ── Ranking local — no depende del backend ──────────────────────────────────
+const getLocalLB = () => {
+  try { return JSON.parse(localStorage.getItem(LS_KEY)) || []; } catch { return []; }
+};
 
-// Radio del círculo — varía para dar dificultad
-const randRadius = () => 22 + Math.floor(Math.random() * 22); // 22–44px
+const saveLocalScore = (score, userName, avatarUrl) => {
+  const lb = getLocalLB();
+  // Buscar si ya existe entrada de este usuario
+  const idx = lb.findIndex(e => e.name === userName);
+  if (idx >= 0) {
+    if (score > lb[idx].score) lb[idx] = { name: userName, avatar: avatarUrl || null, score, date: new Date().toLocaleDateString('es-CO') };
+  } else {
+    lb.push({ name: userName, avatar: avatarUrl || null, score, date: new Date().toLocaleDateString('es-CO') });
+  }
+  // Ordenar desc y guardar top 10
+  lb.sort((a, b) => b.score - a.score);
+  const top10 = lb.slice(0, 10);
+  localStorage.setItem(LS_KEY, JSON.stringify(top10));
+  return top10;
+};
 
-// Color aleatorio vibrante
-const CIRCLE_COLORS = ['#EA4335','#4285F4','#34A853','#FBBC05','#9C27B0','#FF5722','#00BCD4','#E91E63','#FF9800','#8BC34A'];
-const randColor = () => CIRCLE_COLORS[Math.floor(Math.random() * CIRCLE_COLORS.length)];
+// También intentar guardar en backend (best-effort, no bloquea)
+const trySaveBackend = async (score) => {
+  try {
+    const token = localStorage.getItem('token');
+    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+    await fetch(`${API_URL}/games/reaction/score`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ score }),
+    });
+  } catch {}
+};
 
+// ── Helpers ──────────────────────────────────────────────────────────────────
+const randPos = (w, h, r) => ({ x: r + Math.random() * (w - r * 2), y: r + Math.random() * (h - r * 2) });
+const randRadius = () => 22 + Math.floor(Math.random() * 22);
+const COLORS = ['#EA4335','#4285F4','#34A853','#FBBC05','#9C27B0','#FF5722','#00BCD4','#E91E63','#FF9800','#8BC34A'];
+const randColor = () => COLORS[Math.floor(Math.random() * COLORS.length)];
+
+// ── Componente ranking inline ─────────────────────────────────────────────────
+function LocalRanking({ lb, maxHeight = 380 }) {
+  return (
+    <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+      <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:4 }}>
+        <span style={{ fontSize:15, fontWeight:800, color:'#1d1d1f' }}>Ranking</span>
+        <span style={{ fontSize:15 }}>🏆</span>
+      </div>
+      {lb.length === 0 ? (
+        <div style={{ textAlign:'center', padding:'20px 0', color:'#6e6e73', fontSize:12 }}>
+          <div style={{ fontSize:32, marginBottom:8 }}>💥</div>
+          ¡Sé el primero!
+        </div>
+      ) : (
+        <div style={{ display:'flex', flexDirection:'column', gap:5, overflowY:'auto', maxHeight }}>
+          {lb.map((entry, i) => {
+            const isTop = i < 3;
+            const col   = isTop ? TOP_COLORS[i] : null;
+            return (
+              <div key={i} style={{
+                display:'flex', alignItems:'center', gap:8,
+                padding:'8px 10px', borderRadius:14,
+                background: isTop ? col.bg : 'rgba(255,255,255,0.35)',
+                border: isTop ? `1px solid ${col.glow}` : '1px solid rgba(255,255,255,0.5)',
+                boxShadow: isTop ? `0 3px 12px ${col.glow}` : 'none',
+              }}>
+                <span style={{ fontSize: isTop ? 16 : 12, fontWeight:700, minWidth:22, textAlign:'center', color: isTop ? col.text : '#6e6e73' }}>
+                  {isTop ? MEDAL[i] : i + 1}
+                </span>
+                {entry.avatar
+                  ? <img src={entry.avatar} style={{ width:28, height:28, borderRadius:8, objectFit:'cover', flexShrink:0 }} alt=""/>
+                  : <div style={{ width:28, height:28, borderRadius:8, background: isTop ? col.text : '#007aff', display:'flex', alignItems:'center', justifyContent:'center', fontSize:11, fontWeight:700, color:'white', flexShrink:0 }}>
+                      {entry.name?.split(' ').map(n=>n[0]).slice(0,2).join('').toUpperCase() || '?'}
+                    </div>
+                }
+                <div style={{ flex:1, minWidth:0 }}>
+                  <p style={{ margin:0, fontWeight:700, fontSize:11, color: isTop ? col.text : '#1d1d1f', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>
+                    {entry.name}
+                  </p>
+                  <p style={{ margin:0, fontSize:9, color:'#6e6e73' }}>{entry.date}</p>
+                </div>
+                <span style={{ fontWeight:800, fontSize: isTop ? 14 : 12, color: isTop ? col.text : '#1d1d1f', whiteSpace:'nowrap' }}>
+                  {entry.score} pts
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Juego principal ───────────────────────────────────────────────────────────
 export default function ReactionTime({ onClose, currentUser }) {
-  const [phase,    setPhase]    = useState('idle');   // idle | playing | done
+  const [phase,    setPhase]    = useState('idle');
   const [score,    setScore]    = useState(0);
   const [timeLeft, setTimeLeft] = useState(GAME_DURATION);
-  const [circle,   setCircle]   = useState(null);     // { x, y, r, color, id }
-  const [lb,       setLb]       = useState(getCachedLB('reaction'));
+  const [circle,   setCircle]   = useState(null);
+  const [lb,       setLb]       = useState(getLocalLB);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 700);
   const [showLB,   setShowLB]   = useState(false);
 
-  const timerRef  = useRef(null);
-  const scoreRef  = useRef(0);
-  const savedRef  = useRef(false);
-  const circleId  = useRef(0);
+  const timerRef = useRef(null);
+  const scoreRef = useRef(0);
+  const circleId = useRef(0);
 
   const AREA_W = isMobile ? Math.min(window.innerWidth - 48, 340) : 420;
   const AREA_H = isMobile ? 300 : 380;
 
   useEffect(() => {
-    fetchLB('reaction').then(d => setLb(d));
     const f = () => setIsMobile(window.innerWidth < 700);
     window.addEventListener('resize', f);
     return () => window.removeEventListener('resize', f);
   }, []);
 
-  // Spawn un nuevo círculo
   const spawnCircle = useCallback(() => {
     const r = randRadius();
-    const pos = randPos(AREA_W, AREA_H, r);
     circleId.current += 1;
-    setCircle({ ...pos, r, color: randColor(), id: circleId.current });
+    setCircle({ ...randPos(AREA_W, AREA_H, r), r, color: randColor(), id: circleId.current });
   }, [AREA_W, AREA_H]);
 
   const startGame = useCallback(() => {
     scoreRef.current = 0;
-    savedRef.current = false;
     setScore(0);
     setTimeLeft(GAME_DURATION);
     setPhase('playing');
     spawnCircle();
-
-    // Countdown
     let t = GAME_DURATION;
     timerRef.current = setInterval(() => {
       t -= 1;
@@ -70,18 +144,17 @@ export default function ReactionTime({ onClose, currentUser }) {
     }, 1000);
   }, [spawnCircle]);
 
-  // Guardar score al terminar
+  // Guardar al terminar
   useEffect(() => {
-    if (phase === 'done' && !savedRef.current) {
-      savedRef.current = true;
-      if (scoreRef.current > 0) {
-        saveGameScore('reaction', scoreRef.current)
-          .then(() => fetchLB('reaction').then(d => setLb(d)));
-      }
+    if (phase === 'done' && scoreRef.current > 0) {
+      const name   = currentUser?.fullName || localStorage.getItem('userName') || 'Jugador';
+      const avatar = currentUser?.avatarUrl || null;
+      const updated = saveLocalScore(scoreRef.current, name, avatar);
+      setLb(updated);
+      trySaveBackend(scoreRef.current); // best-effort al backend
     }
   }, [phase]);
 
-  // Cleanup
   useEffect(() => () => clearInterval(timerRef.current), []);
 
   const handleCircleClick = useCallback((e) => {
@@ -95,15 +168,12 @@ export default function ReactionTime({ onClose, currentUser }) {
   useEffect(() => {
     const onKey = (e) => {
       if (e.key === 'Escape') { clearInterval(timerRef.current); onClose(); }
-      if ((e.key === ' ' || e.key === 'Enter') && phase !== 'playing') {
-        e.preventDefault(); startGame();
-      }
+      if ((e.key === ' ' || e.key === 'Enter') && phase !== 'playing') { e.preventDefault(); startGame(); }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose, phase, startGame]);
 
-  // Barra de tiempo — color cambia según urgencia
   const barColor = timeLeft > 5 ? '#34A853' : timeLeft > 2 ? '#FBBC05' : '#EA4335';
   const barPct   = (timeLeft / GAME_DURATION) * 100;
 
@@ -111,17 +181,13 @@ export default function ReactionTime({ onClose, currentUser }) {
     <div style={{ ...overlayStyle }} onClick={e => e.stopPropagation()}>
       <div style={{ display:'flex', flexDirection: isMobile ? 'column' : 'row', gap:12, alignItems:'flex-start', maxWidth:'98vw' }}>
 
-        {/* Ranking desktop */}
         {!isMobile && (
           <div style={{ ...glassLight, padding:'18px 14px', minWidth:200 }}>
-            <GameRanking lb={lb} game="reaction" maxHeight={380} />
+            <LocalRanking lb={lb} maxHeight={380} />
           </div>
         )}
 
-        {/* Panel juego */}
         <div style={{ ...glassLight, padding: isMobile ? '14px 14px 10px' : '20px 20px 16px', display:'flex', flexDirection:'column', alignItems:'center', gap: isMobile ? 10 : 14 }}>
-
-          {/* Header */}
           <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', width:'100%' }}>
             <div style={{ display:'flex', alignItems:'baseline', gap:8 }}>
               <span style={{ fontSize: isMobile ? 16 : 20, fontWeight:800, color:'#1d1d1f', letterSpacing:'-0.5px' }}>💥 Revienta</span>
@@ -145,23 +211,16 @@ export default function ReactionTime({ onClose, currentUser }) {
 
           {isMobile && showLB ? (
             <div style={{ width:'100%', maxWidth:360, maxHeight:260, overflowY:'auto' }}>
-              <GameRanking lb={lb} game="reaction" maxHeight={240} />
+              <LocalRanking lb={lb} maxHeight={240} />
             </div>
           ) : (
             <>
-              {/* Barra de tiempo */}
               {phase === 'playing' && (
                 <div style={{ width: AREA_W, height:8, background:'rgba(0,0,0,0.1)', borderRadius:4, overflow:'hidden' }}>
-                  <div style={{
-                    height:'100%', borderRadius:4,
-                    width:`${barPct}%`,
-                    background: barColor,
-                    transition:'width 1s linear, background 0.3s',
-                  }}/>
+                  <div style={{ height:'100%', borderRadius:4, width:`${barPct}%`, background: barColor, transition:'width 1s linear, background 0.3s' }}/>
                 </div>
               )}
 
-              {/* Área de juego */}
               <div style={{
                 width: AREA_W, height: AREA_H,
                 background:'linear-gradient(135deg,#1e293b,#0f172a)',
@@ -170,8 +229,6 @@ export default function ReactionTime({ onClose, currentUser }) {
                 cursor: phase === 'playing' ? 'crosshair' : 'default',
                 userSelect:'none',
               }}>
-
-                {/* Idle */}
                 {phase === 'idle' && (
                   <div style={{ position:'absolute', inset:0, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:12 }}>
                     <span style={{ fontSize:52 }}>💥</span>
@@ -186,7 +243,6 @@ export default function ReactionTime({ onClose, currentUser }) {
                   </div>
                 )}
 
-                {/* Done */}
                 {phase === 'done' && (
                   <div style={{ position:'absolute', inset:0, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:10 }}>
                     <span style={{ fontSize:48 }}>🎯</span>
@@ -201,50 +257,30 @@ export default function ReactionTime({ onClose, currentUser }) {
                   </div>
                 )}
 
-                {/* Círculo activo */}
                 {phase === 'playing' && circle && (
-                  <div
-                    key={circle.id}
-                    onClick={handleCircleClick}
-                    style={{
-                      position:'absolute',
-                      left: circle.x - circle.r,
-                      top:  circle.y - circle.r,
-                      width:  circle.r * 2,
-                      height: circle.r * 2,
-                      borderRadius:'50%',
-                      background: circle.color,
-                      boxShadow: `0 0 20px ${circle.color}99, 0 0 40px ${circle.color}44`,
-                      cursor:'pointer',
-                      animation:'popIn 0.12s ease-out',
-                      display:'flex', alignItems:'center', justifyContent:'center',
-                    }}
-                  />
+                  <div key={circle.id} onClick={handleCircleClick} style={{
+                    position:'absolute',
+                    left: circle.x - circle.r, top: circle.y - circle.r,
+                    width: circle.r * 2, height: circle.r * 2,
+                    borderRadius:'50%', background: circle.color,
+                    boxShadow: `0 0 20px ${circle.color}99, 0 0 40px ${circle.color}44`,
+                    cursor:'pointer', animation:'popIn 0.12s ease-out',
+                  }}/>
                 )}
 
-                {/* Contador de tiempo encima del área */}
                 {phase === 'playing' && (
                   <div style={{
                     position:'absolute', top:10, left:'50%', transform:'translateX(-50%)',
                     background:'rgba(0,0,0,0.45)', borderRadius:20, padding:'3px 14px',
-                    color: barColor, fontWeight:800, fontSize:18, letterSpacing:'-0.5px',
-                    backdropFilter:'blur(8px)',
+                    color: barColor, fontWeight:800, fontSize:18, backdropFilter:'blur(8px)',
                   }}>
                     {timeLeft}s
                   </div>
                 )}
               </div>
 
-              <style>{`
-                @keyframes popIn {
-                  from { transform: scale(0.3); opacity:0; }
-                  to   { transform: scale(1);   opacity:1; }
-                }
-              `}</style>
-
-              <p style={{ color:'rgba(0,0,0,0.3)', fontSize: isMobile ? 10 : 11, margin:0 }}>
-                Toca los círculos · ESC cierra
-              </p>
+              <style>{`@keyframes popIn{from{transform:scale(0.3);opacity:0}to{transform:scale(1);opacity:1}}`}</style>
+              <p style={{ color:'rgba(0,0,0,0.3)', fontSize: isMobile ? 10 : 11, margin:0 }}>Toca los círculos · ESC cierra</p>
             </>
           )}
         </div>
