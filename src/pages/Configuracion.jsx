@@ -1518,13 +1518,23 @@ export default function Configuracion() {
     const file = e.target.files[0];
     if (!file) return;
     if (file.size > 5*1024*1024) { showToast('Máx. 5MB','error'); return; }
-    // Convertir a base64 directamente — funciona en Vercel sin Supabase
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      setAvatarPreview(ev.target.result);
-      setAvatarFile(ev.target.result); // guardamos el base64
+    // Comprimir a máx 400x400 y calidad 0.75 antes de base64
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      const MAX = 400;
+      let w = img.width, h = img.height;
+      if (w > h) { if (w > MAX) { h = Math.round(h * MAX / w); w = MAX; } }
+      else        { if (h > MAX) { w = Math.round(w * MAX / h); h = MAX; } }
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      const b64 = canvas.toDataURL('image/jpeg', 0.75);
+      URL.revokeObjectURL(url);
+      setAvatarPreview(b64);
+      setAvatarFile(b64);
     };
-    reader.readAsDataURL(file);
+    img.src = url;
   };
 
   const handleSaveProfile = async (e) => {
