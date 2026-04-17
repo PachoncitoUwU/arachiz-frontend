@@ -27,7 +27,7 @@ const WORD_LISTS = {
     'SIGLO','SOBRE','SOLAR','SUELO','TABLA','TANTO','TARDE','TECHO','TOTAL',
     'TRAJE','TRATO','TURNO','VERDE','VIAJE','VISTA','VIVIR','VUELO','ZORRO',
     'BRAVO','CLARO','CORTO','FIRME','FLACO','GORDO','JUSTO','LENTO','LIBRE',
-    'NOBLE','POBRE','SABIO','SUCIO','DULCE','DENSO','LLENO',
+    'NOBLE','POBRE','SABIO','SUCIO','DENSO','LLENO',
   ],
   6: [
     'FICHAR','SABADO','CIUDAD','TIEMPO','CAMINO','DINERO','FUTURO','IMAGEN',
@@ -39,7 +39,7 @@ const WORD_LISTS = {
     'PLANTA','RAPIDO','RECIBO','REGALO','RIESGO','RITUAL','SEGURO','SIMPLE',
     'SOCIAL','SONIDO','SUERTE','TEATRO','TESORO','TITULO','ULTIMO','UNIDAD',
     'URBANO','VALIDO','VECINO','VERANO','VIDRIO','VISION','VISITA','VOLCAN',
-    'AGENTE','ALEGRE','AMABLE','BONITA','CANTAR','CRECER','DORMIR','EMPEZAR',
+    'AGENTE','ALEGRE','AMABLE','BONITA','CANTAR','CRECER','DORMIR',
   ],
 };
 
@@ -77,8 +77,8 @@ const STATE_COLORS = {
   correct: { bg:'#34A853', text:'white' },
   present: { bg:'#FBBC05', text:'white' },
   absent:  { bg:'#374151', text:'white' },
-  empty:   { bg:'rgba(255,255,255,0.15)', text:'#1d1d1f' },
-  active:  { bg:'rgba(255,255,255,0.4)', text:'#1d1d1f' },
+  empty:   { bg:'rgba(255,255,255,0.18)', text:'#1d1d1f' },
+  active:  { bg:'rgba(255,255,255,0.45)', text:'#1d1d1f' },
 };
 
 const DAILY_KEY = 'arachiz_wordle_daily_v2';
@@ -102,6 +102,10 @@ export default function WordleGame({ onClose }) {
   const [phase,    setPhase]    = useState(() => hasPlayedToday(5) ? 'done' : 'playing');
   const [shake,    setShake]    = useState(false);
   const savedRef = React.useRef(false);
+
+  // Tamaño de celda adaptativo según longitud
+  const cellSize = wordLength === 6 ? 52 : wordLength === 4 ? 62 : 56;
+  const keyW     = wordLength === 6 ? 30 : 34;
 
   const submit = useCallback(() => {
     if (phase !== 'playing') return;
@@ -154,14 +158,19 @@ export default function WordleGame({ onClose }) {
 
   return (
     <div style={{ ...overlayStyle }} onClick={e => e.stopPropagation()}>
-      <div style={{ ...glassLight, padding:'18px 16px 14px', display:'flex', flexDirection:'column', alignItems:'center', gap:10, maxWidth:'98vw' }}>
+      <div style={{
+        ...glassLight,
+        padding:'20px 20px 16px',
+        display:'flex', flexDirection:'column', alignItems:'center', gap:12,
+        maxWidth:'98vw', width: 'fit-content',
+      }}>
         <style>{`@keyframes shake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-6px)}40%,80%{transform:translateX(6px)}}`}</style>
 
         {/* Header */}
-        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', width:'100%' }}>
-          <span style={{ fontSize:18, fontWeight:800, color:'#1d1d1f', letterSpacing:'-0.5px' }}>📝 Wordle</span>
+        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', width:'100%', minWidth: wordLength * cellSize + (wordLength-1)*6 }}>
+          <span style={{ fontSize:20, fontWeight:800, color:'#1d1d1f', letterSpacing:'-0.5px' }}>📝 Wordle</span>
           <button onClick={onClose}
-            style={{ background:'rgba(0,0,0,0.07)', border:'none', borderRadius:14, color:'#1d1d1f', padding:'5px 12px', cursor:'pointer', fontSize:12, fontWeight:600 }}>
+            style={{ background:'rgba(0,0,0,0.07)', border:'none', borderRadius:14, color:'#1d1d1f', padding:'6px 14px', cursor:'pointer', fontSize:13, fontWeight:600 }}>
             Done
           </button>
         </div>
@@ -173,10 +182,11 @@ export default function WordleGame({ onClose }) {
             return (
               <button key={length} onClick={() => switchLength(length)}
                 style={{
-                  background: wordLength === length ? '#007aff' : played ? 'rgba(52,168,83,0.2)' : 'rgba(255,255,255,0.3)',
+                  background: wordLength === length ? '#007aff' : played ? 'rgba(52,168,83,0.2)' : 'rgba(255,255,255,0.35)',
                   color: wordLength === length ? 'white' : played ? '#34A853' : '#1d1d1f',
                   border: played && wordLength !== length ? '1.5px solid #34A853' : 'none',
-                  borderRadius:8, padding:'6px 14px', fontSize:12, fontWeight:700, cursor:'pointer',
+                  borderRadius:10, padding:'7px 18px', fontSize:13, fontWeight:700, cursor:'pointer',
+                  transition:'all 0.15s',
                 }}>
                 {length} letras {played ? '✓' : ''}
               </button>
@@ -186,14 +196,14 @@ export default function WordleGame({ onClose }) {
 
         {/* Aviso ya jugó */}
         {alreadyPlayed && (
-          <div style={{ background:'rgba(52,168,83,0.12)', border:'1.5px solid #34A853', borderRadius:12, padding:'8px 16px', textAlign:'center' }}>
-            <p style={{ margin:0, fontWeight:700, color:'#34A853', fontSize:13 }}>✅ Ya jugaste {wordLength} letras hoy</p>
-            <p style={{ margin:'3px 0 0', color:'#6e6e73', fontSize:11 }}>Vuelve mañana · Prueba otra longitud</p>
+          <div style={{ background:'rgba(52,168,83,0.12)', border:'1.5px solid #34A853', borderRadius:14, padding:'10px 20px', textAlign:'center' }}>
+            <p style={{ margin:0, fontWeight:700, color:'#34A853', fontSize:14 }}>✅ Ya jugaste {wordLength} letras hoy</p>
+            <p style={{ margin:'4px 0 0', color:'#6e6e73', fontSize:12 }}>Vuelve mañana · Prueba otra longitud</p>
           </div>
         )}
 
         {/* Grid */}
-        <div style={{ display:'flex', flexDirection:'column', gap:4, opacity: alreadyPlayed ? 0.5 : 1 }}>
+        <div style={{ display:'flex', flexDirection:'column', gap:6, opacity: alreadyPlayed ? 0.5 : 1 }}>
           {Array.from({ length: MAX_ATTEMPTS }).map((_, row) => {
             const guess = guesses[row];
             const isActive = row === guesses.length && phase === 'playing';
@@ -204,17 +214,18 @@ export default function WordleGame({ onClose }) {
               ? guess.map(g => g.state)
               : Array(WORD.length).fill(isActive ? 'active' : 'empty');
             return (
-              <div key={row} style={{ display:'flex', gap:4, animation: isActive && shake ? 'shake 0.4s ease' : 'none' }}>
+              <div key={row} style={{ display:'flex', gap:6, animation: isActive && shake ? 'shake 0.4s ease' : 'none' }}>
                 {letters.map((l, col) => {
                   const s = STATE_COLORS[states[col]] || STATE_COLORS.empty;
                   return (
                     <div key={col} style={{
-                      width:44, height:44, borderRadius:8,
+                      width: cellSize, height: cellSize, borderRadius:10,
                       background: s.bg, color: s.text,
                       display:'flex', alignItems:'center', justifyContent:'center',
-                      fontSize:18, fontWeight:800,
-                      border: states[col] === 'empty' || states[col] === 'active' ? '1.5px solid rgba(255,255,255,0.4)' : 'none',
+                      fontSize: cellSize * 0.38, fontWeight:800,
+                      border: states[col] === 'empty' || states[col] === 'active' ? '2px solid rgba(255,255,255,0.5)' : 'none',
                       transition:'background 0.2s',
+                      boxShadow: states[col] === 'correct' ? '0 4px 12px rgba(52,168,83,0.4)' : states[col] === 'present' ? '0 4px 12px rgba(251,188,5,0.4)' : 'none',
                     }}>
                       {l.trim()}
                     </div>
@@ -229,32 +240,34 @@ export default function WordleGame({ onClose }) {
         {(phase === 'won' || phase === 'lost') && (
           <div style={{ textAlign:'center' }}>
             {phase === 'won'
-              ? <p style={{ color:'#34A853', fontWeight:800, fontSize:15, margin:'2px 0' }}>🎉 ¡Correcto en {guesses.length} intentos!</p>
-              : <p style={{ color:'#EA4335', fontWeight:800, fontSize:15, margin:'2px 0' }}>La palabra era: <strong>{WORD}</strong></p>
+              ? <p style={{ color:'#34A853', fontWeight:800, fontSize:16, margin:'2px 0' }}>🎉 ¡Correcto en {guesses.length} intentos!</p>
+              : <p style={{ color:'#EA4335', fontWeight:800, fontSize:16, margin:'2px 0' }}>La palabra era: <strong>{WORD}</strong></p>
             }
-            <p style={{ color:'#6e6e73', fontSize:11, margin:'3px 0 0' }}>Vuelve mañana para jugar de nuevo</p>
+            <p style={{ color:'#6e6e73', fontSize:12, margin:'4px 0 0' }}>Vuelve mañana para jugar de nuevo</p>
           </div>
         )}
 
         {/* Teclado */}
         {!alreadyPlayed && (
-          <div style={{ display:'flex', flexDirection:'column', gap:4 }}>
+          <div style={{ display:'flex', flexDirection:'column', gap:5 }}>
             {KEYBOARD.map((row, ri) => (
-              <div key={ri} style={{ display:'flex', gap:3, justifyContent:'center' }}>
+              <div key={ri} style={{ display:'flex', gap:4, justifyContent:'center' }}>
                 {row.map(key => {
                   const st = letterStates[key];
-                  const col = st ? STATE_COLORS[st] : { bg:'rgba(255,255,255,0.55)', text:'#1d1d1f' };
+                  const col = st ? STATE_COLORS[st] : { bg:'rgba(255,255,255,0.6)', text:'#1d1d1f' };
                   const isWide = key === 'ENTER' || key === '⌫';
                   const isDisabled = phase !== 'playing';
                   return (
                     <button key={key} onClick={() => pressKey(key)} disabled={isDisabled}
                       style={{
-                        width: isWide ? 52 : 32, height:36, borderRadius:7, border:'none',
+                        width: isWide ? keyW * 1.7 : keyW,
+                        height: 42, borderRadius:8, border:'none',
                         background: col.bg, color: col.text,
-                        fontSize: isWide ? 10 : 13, fontWeight:700,
+                        fontSize: isWide ? 11 : 14, fontWeight:700,
                         cursor: isDisabled ? 'not-allowed' : 'pointer',
                         opacity: isDisabled ? 0.5 : 1,
                         backdropFilter:'blur(8px)', transition:'background 0.2s',
+                        boxShadow:'0 2px 4px rgba(0,0,0,0.08)',
                       }}>
                       {key}
                     </button>
