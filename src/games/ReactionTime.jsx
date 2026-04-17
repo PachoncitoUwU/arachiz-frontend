@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { glassLight, overlayStyle, MEDAL, TOP_COLORS } from './gameUtils';
 
 const GAME_DURATION = 10;
-const LS_KEY = 'arachiz_reaction_lb_v2'; // v2 = limpio, sin datos corruptos
+const LS_KEY = 'arachiz_reaction_lb_v3'; // v3 = limpio tras borrar BD
 
 const getLocalLB = () => {
   try { return JSON.parse(localStorage.getItem(LS_KEY)) || []; } catch { return []; }
@@ -34,6 +34,22 @@ const trySaveBackend = (score) => {
       body: JSON.stringify({ score }),
     }).catch(() => {});
   } catch {}
+};
+
+// Traer ranking del backend y actualizar localStorage
+const fetchBackendLB = async () => {
+  try {
+    const API = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+    const res  = await fetch(`${API}/games/reaction/leaderboard`);
+    const data = await res.json();
+    if (data.scores?.length) {
+      // Ordenar desc por si acaso
+      const sorted = [...data.scores].sort((a, b) => b.score - a.score);
+      localStorage.setItem(LS_KEY, JSON.stringify(sorted));
+      return sorted;
+    }
+  } catch {}
+  return getLocalLB();
 };
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -107,6 +123,8 @@ export default function ReactionTime({ onClose, currentUser }) {
   const AREA_H = isMobile ? 300 : 380;
 
   useEffect(() => {
+    // Al abrir, traer ranking del backend (ya limpio y ordenado)
+    fetchBackendLB().then(lb => setLb(lb));
     const f = () => setIsMobile(window.innerWidth < 700);
     window.addEventListener('resize', f);
     return () => window.removeEventListener('resize', f);
@@ -136,9 +154,12 @@ export default function ReactionTime({ onClose, currentUser }) {
     if (phase === 'done' && scoreRef.current > 0) {
       const name   = currentUser?.fullName || 'Jugador';
       const avatar = currentUser?.avatarUrl || null;
+      // Guardar local inmediatamente
       const updated = saveLocalScore(scoreRef.current, name, avatar);
       setLb(updated);
+      // Guardar en backend y refrescar desde backend
       trySaveBackend(scoreRef.current);
+      setTimeout(() => fetchBackendLB().then(lb => setLb(lb)), 1500);
     }
   }, [phase, currentUser]);
 
