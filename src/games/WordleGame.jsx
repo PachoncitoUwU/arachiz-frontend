@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import GameLayout from './GameLayout';
-import { fetchLB, saveGameScore, getCachedLB } from './gameUtils';
+import { overlayStyle, glassLight } from './gameUtils';
 
 const WORD_LISTS = {
   4: [
@@ -9,7 +8,7 @@ const WORD_LISTS = {
     'BIEN','DATO','EDAD','FASE','AZUL','BESO','CAFE','DEDO','FRIO','GRIS',
     'HILO','ISLA','JOYA','KILO','LUNA','MANO','NUBE','OJOS','PIEL','ROJO',
     'SOLO','TREN','UVAS','VINO','ALTO','BAJO','CERO','DURO','FIJO','LOCO',
-    'RICO','SECO','FINO','RARO','LISO','PURO','VIVO','APTO','BUEN','CARO',
+    'RICO','SECO','FINO','RARO','LISO','PURO','VIVO','APTO','CARO','VAGO',
   ],
   5: [
     'FICHA','SABER','MUNDO','LUGAR','FORMA','PARTE','GRUPO','PUNTO','ORDEN',
@@ -23,26 +22,24 @@ const WORD_LISTS = {
     'HACER','HECHO','HIELO','HONOR','HOTEL','HUESO','HUMOR','IGUAL','JUNTO',
     'LARGO','LECHE','LETRA','LIBRO','LINEA','LLAMA','LLENO','MADRE','MAYOR',
     'MENOR','METAL','METRO','MIEDO','MOVER','MUCHO','NACER','NEGRO','NOCHE',
-    'NORTE','NUEVO','ORDEN','PADRE','PAPEL','PASAR','PECHO','PERRO','PIANO',
-    'PIEZA','PLATA','PLAZA','PODER','QUESO','REINO','RESTO','ROBOT','SALIR',
-    'SANTO','SERIO','SIGLO','SOBRE','SOLAR','SUELO','TABLA','TANTO','TARDE',
-    'TECHO','TOTAL','TRAJE','TRATO','TURNO','VERDE','VIAJE','VISTA','VIVIR',
-    'VUELO','ZORRO','BRAVO','CLARO','CORTO','DENSO','DULCE','FIRME','FLACO',
-    'GORDO','JUSTO','LENTO','LIBRE','LLENO','NOBLE','POBRE','SABIO','SUCIO',
+    'NORTE','NUEVO','PADRE','PASAR','PECHO','PERRO','PIANO','PIEZA','PLATA',
+    'PLAZA','PODER','QUESO','REINO','RESTO','ROBOT','SALIR','SANTO','SERIO',
+    'SIGLO','SOBRE','SOLAR','SUELO','TABLA','TANTO','TARDE','TECHO','TOTAL',
+    'TRAJE','TRATO','TURNO','VERDE','VIAJE','VISTA','VIVIR','VUELO','ZORRO',
+    'BRAVO','CLARO','CORTO','FIRME','FLACO','GORDO','JUSTO','LENTO','LIBRE',
+    'NOBLE','POBRE','SABIO','SUCIO','DULCE','DENSO','LLENO',
   ],
   6: [
     'FICHAR','SABADO','CIUDAD','TIEMPO','CAMINO','DINERO','FUTURO','IMAGEN',
     'LENGUA','MANERA','NUMERO','OBJETO','PRECIO','PUEBLO','REGION','SANGRE',
-    'SEMANA','TIERRA','VERDAD','VIAJES','BLANCO','BONITO','BRILLO','CAMBIO',
-    'CIERTO','COMIDA','CUENTA','CUANDO','DENTRO','DUENDE','ESCENA','ESPEJO',
-    'ESTADO','FUERZA','GRANDE','GRUESO','HUMANO','INICIO','JARDÍN','JOVEN',
-    'LIGERO','LIMPIO','LLUVIA','MADERA','MEDIDA','MODELO','MODULO','MOTIVO',
-    'MUSICA','NACION','NORMAL','OSCURO','PASADO','PIEDRA','PLANTA','PODRIA',
-    'PRIMER','PROPIO','PUERTA','RAPIDO','RECIBO','REGALO','REMOTO','RIESGO',
-    'RITUAL','SABIDO','SECRETO','SEGURO','SENORA','SIMPLE','SOCIAL','SONIDO',
-    'SUBIDA','SUERTE','TALENTO','TEATRO','TEJIDO','TESORO','TITULO','TRAIGO',
-    'ULTIMO','UNIDAD','URBANO','VALIDO','VECINO','VENENO','VERANO','VIDRIO',
-    'VIRGEN','VISION','VISITA','VIVIDO','VOLCAN','ZURDO','AGENTE','ALEGRE',
+    'SEMANA','TIERRA','VERDAD','BLANCO','BONITO','BRILLO','CAMBIO','CIERTO',
+    'COMIDA','CUENTA','DENTRO','ESCENA','ESPEJO','ESTADO','FUERZA','GRANDE',
+    'HUMANO','INICIO','JOVEN','LIGERO','LIMPIO','LLUVIA','MADERA','MEDIDA',
+    'MODELO','MOTIVO','MUSICA','NACION','NORMAL','OSCURO','PASADO','PIEDRA',
+    'PLANTA','RAPIDO','RECIBO','REGALO','RIESGO','RITUAL','SEGURO','SIMPLE',
+    'SOCIAL','SONIDO','SUERTE','TEATRO','TESORO','TITULO','ULTIMO','UNIDAD',
+    'URBANO','VALIDO','VECINO','VERANO','VIDRIO','VISION','VISITA','VOLCAN',
+    'AGENTE','ALEGRE','AMABLE','BONITA','CANTAR','CRECER','DORMIR','EMPEZAR',
   ],
 };
 
@@ -84,7 +81,6 @@ const STATE_COLORS = {
   active:  { bg:'rgba(255,255,255,0.4)', text:'#1d1d1f' },
 };
 
-// ── Daily tracking: 1 partida por longitud por día ──
 const DAILY_KEY = 'arachiz_wordle_daily_v2';
 const getTodayStr = () => new Date().toISOString().slice(0, 10);
 const getDailyRecord = () => { try { return JSON.parse(localStorage.getItem(DAILY_KEY)) || {}; } catch { return {}; } };
@@ -93,38 +89,19 @@ const markPlayed = (length) => {
   const today = getTodayStr();
   if (!rec[today]) rec[today] = {};
   rec[today][length] = true;
-  // Limpiar días viejos
   Object.keys(rec).forEach(d => { if (d !== today) delete rec[d]; });
   localStorage.setItem(DAILY_KEY, JSON.stringify(rec));
 };
-const hasPlayedToday = (length) => {
-  const rec = getDailyRecord();
-  return !!(rec[getTodayStr()]?.[length]);
-};
+const hasPlayedToday = (length) => !!(getDailyRecord()[getTodayStr()]?.[length]);
 
-export default function WordleGame({ onClose, currentUser }) {
+export default function WordleGame({ onClose }) {
   const [wordLength, setWordLength] = useState(5);
   const [WORD, setWORD] = useState(() => getRandomWord(5));
   const [guesses,  setGuesses]  = useState([]);
   const [current,  setCurrent]  = useState('');
   const [phase,    setPhase]    = useState(() => hasPlayedToday(5) ? 'done' : 'playing');
-  const [lb,       setLb]       = useState(getCachedLB('wordle'));
   const [shake,    setShake]    = useState(false);
   const savedRef = React.useRef(false);
-
-  useEffect(() => { fetchLB('wordle').then(d => setLb(d)); }, []);
-
-  useEffect(() => {
-    if ((phase === 'won' || phase === 'lost') && !savedRef.current) {
-      savedRef.current = true;
-      markPlayed(wordLength);
-      if (phase === 'won') {
-        saveGameScore('wordle', guesses.length).then(() => fetchLB('wordle').then(d => setLb(d)));
-      } else {
-        fetchLB('wordle').then(d => setLb(d));
-      }
-    }
-  }, [phase, guesses, wordLength]);
 
   const submit = useCallback(() => {
     if (phase !== 'playing') return;
@@ -133,9 +110,15 @@ export default function WordleGame({ onClose, currentUser }) {
     const newGuesses = [...guesses, result];
     setGuesses(newGuesses);
     setCurrent('');
-    if (current === WORD) { setPhase('won'); return; }
-    if (newGuesses.length >= MAX_ATTEMPTS) setPhase('lost');
-  }, [current, guesses, WORD, phase]);
+    if (current === WORD) {
+      if (!savedRef.current) { savedRef.current = true; markPlayed(wordLength); }
+      setPhase('won'); return;
+    }
+    if (newGuesses.length >= MAX_ATTEMPTS) {
+      if (!savedRef.current) { savedRef.current = true; markPlayed(wordLength); }
+      setPhase('lost');
+    }
+  }, [current, guesses, WORD, phase, wordLength]);
 
   const pressKey = useCallback((key) => {
     if (phase !== 'playing') return;
@@ -147,9 +130,7 @@ export default function WordleGame({ onClose, currentUser }) {
   useEffect(() => {
     const onKey = (e) => {
       if (e.key === 'Escape') { onClose(); return; }
-      if (phase === 'playing') {
-        pressKey(e.key === 'Backspace' ? '⌫' : e.key.toUpperCase());
-      }
+      if (phase === 'playing') pressKey(e.key === 'Backspace' ? '⌫' : e.key.toUpperCase());
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
@@ -169,13 +150,21 @@ export default function WordleGame({ onClose, currentUser }) {
     setPhase(hasPlayedToday(length) ? 'done' : 'playing');
   };
 
-  const score = phase === 'won' ? guesses.length : 0;
   const alreadyPlayed = phase === 'done';
 
   return (
-    <GameLayout title="📝 Wordle" score={score} lb={lb} game="wordle" onClose={onClose}>
-      <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:10 }}>
+    <div style={{ ...overlayStyle }} onClick={e => e.stopPropagation()}>
+      <div style={{ ...glassLight, padding:'18px 16px 14px', display:'flex', flexDirection:'column', alignItems:'center', gap:10, maxWidth:'98vw' }}>
         <style>{`@keyframes shake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-6px)}40%,80%{transform:translateX(6px)}}`}</style>
+
+        {/* Header */}
+        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', width:'100%' }}>
+          <span style={{ fontSize:18, fontWeight:800, color:'#1d1d1f', letterSpacing:'-0.5px' }}>📝 Wordle</span>
+          <button onClick={onClose}
+            style={{ background:'rgba(0,0,0,0.07)', border:'none', borderRadius:14, color:'#1d1d1f', padding:'5px 12px', cursor:'pointer', fontSize:12, fontWeight:600 }}>
+            Done
+          </button>
+        </div>
 
         {/* Selector de longitud */}
         <div style={{ display:'flex', gap:8 }}>
@@ -184,12 +173,10 @@ export default function WordleGame({ onClose, currentUser }) {
             return (
               <button key={length} onClick={() => switchLength(length)}
                 style={{
-                  background: wordLength === length ? '#007aff' : played ? 'rgba(52,168,83,0.25)' : 'rgba(255,255,255,0.3)',
+                  background: wordLength === length ? '#007aff' : played ? 'rgba(52,168,83,0.2)' : 'rgba(255,255,255,0.3)',
                   color: wordLength === length ? 'white' : played ? '#34A853' : '#1d1d1f',
-                  border: played ? '1.5px solid #34A853' : 'none',
-                  borderRadius: 8, padding:'6px 12px', fontSize:12, fontWeight:700,
-                  cursor:'pointer', backdropFilter:'blur(8px)',
-                  position:'relative',
+                  border: played && wordLength !== length ? '1.5px solid #34A853' : 'none',
+                  borderRadius:8, padding:'6px 14px', fontSize:12, fontWeight:700, cursor:'pointer',
                 }}>
                 {length} letras {played ? '✓' : ''}
               </button>
@@ -197,15 +184,15 @@ export default function WordleGame({ onClose, currentUser }) {
           })}
         </div>
 
-        {/* Aviso si ya jugó hoy */}
+        {/* Aviso ya jugó */}
         {alreadyPlayed && (
-          <div style={{ background:'rgba(52,168,83,0.15)', border:'1.5px solid #34A853', borderRadius:12, padding:'10px 18px', textAlign:'center' }}>
+          <div style={{ background:'rgba(52,168,83,0.12)', border:'1.5px solid #34A853', borderRadius:12, padding:'8px 16px', textAlign:'center' }}>
             <p style={{ margin:0, fontWeight:700, color:'#34A853', fontSize:13 }}>✅ Ya jugaste {wordLength} letras hoy</p>
-            <p style={{ margin:'4px 0 0', color:'#6e6e73', fontSize:11 }}>Vuelve mañana · Prueba otra longitud</p>
+            <p style={{ margin:'3px 0 0', color:'#6e6e73', fontSize:11 }}>Vuelve mañana · Prueba otra longitud</p>
           </div>
         )}
 
-        {/* Grid de intentos — siempre visible */}
+        {/* Grid */}
         <div style={{ display:'flex', flexDirection:'column', gap:4, opacity: alreadyPlayed ? 0.5 : 1 }}>
           {Array.from({ length: MAX_ATTEMPTS }).map((_, row) => {
             const guess = guesses[row];
@@ -216,7 +203,6 @@ export default function WordleGame({ onClose, currentUser }) {
             const states = guess
               ? guess.map(g => g.state)
               : Array(WORD.length).fill(isActive ? 'active' : 'empty');
-
             return (
               <div key={row} style={{ display:'flex', gap:4, animation: isActive && shake ? 'shake 0.4s ease' : 'none' }}>
                 {letters.map((l, col) => {
@@ -243,14 +229,14 @@ export default function WordleGame({ onClose, currentUser }) {
         {(phase === 'won' || phase === 'lost') && (
           <div style={{ textAlign:'center' }}>
             {phase === 'won'
-              ? <p style={{ color:'#34A853', fontWeight:800, fontSize:15, margin:'4px 0' }}>🎉 ¡Correcto en {guesses.length} intentos!</p>
-              : <p style={{ color:'#EA4335', fontWeight:800, fontSize:15, margin:'4px 0' }}>La palabra era: <strong>{WORD}</strong></p>
+              ? <p style={{ color:'#34A853', fontWeight:800, fontSize:15, margin:'2px 0' }}>🎉 ¡Correcto en {guesses.length} intentos!</p>
+              : <p style={{ color:'#EA4335', fontWeight:800, fontSize:15, margin:'2px 0' }}>La palabra era: <strong>{WORD}</strong></p>
             }
-            <p style={{ color:'#6e6e73', fontSize:11, margin:'4px 0 0' }}>Vuelve mañana para jugar de nuevo</p>
+            <p style={{ color:'#6e6e73', fontSize:11, margin:'3px 0 0' }}>Vuelve mañana para jugar de nuevo</p>
           </div>
         )}
 
-        {/* Teclado — solo si está jugando */}
+        {/* Teclado */}
         {!alreadyPlayed && (
           <div style={{ display:'flex', flexDirection:'column', gap:4 }}>
             {KEYBOARD.map((row, ri) => (
@@ -279,6 +265,6 @@ export default function WordleGame({ onClose, currentUser }) {
           </div>
         )}
       </div>
-    </GameLayout>
+    </div>
   );
 }

@@ -1518,17 +1518,26 @@ export default function Configuracion() {
     const file = e.target.files[0];
     if (!file) return;
     if (file.size > 5*1024*1024) { showToast('Máx. 5MB','error'); return; }
-    setAvatarFile(file);
-    setAvatarPreview(URL.createObjectURL(file));
+    // Convertir a base64 directamente — funciona en Vercel sin Supabase
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      setAvatarPreview(ev.target.result);
+      setAvatarFile(ev.target.result); // guardamos el base64
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleSaveProfile = async (e) => {
     e.preventDefault(); setSavingProfile(true);
     try {
-      const body = new FormData();
-      if (fullName.trim() && fullName !== user?.fullName) body.append('fullName', fullName.trim());
-      if (avatarFile) body.append('avatar', avatarFile);
-      const d    = await fetch(`${API_BASE}/api/auth/profile`, { method:'PUT', headers:{ Authorization:`Bearer ${localStorage.getItem('token')}` }, body });
+      const body = {};
+      if (fullName.trim() && fullName !== user?.fullName) body.fullName = fullName.trim();
+      if (avatarFile) body.avatarBase64 = avatarFile; // base64 string
+      const d    = await fetch(`${API_BASE}/api/auth/profile`, {
+        method:'PUT',
+        headers:{ Authorization:`Bearer ${localStorage.getItem('token')}`, 'Content-Type':'application/json' },
+        body: JSON.stringify(body),
+      });
       const json = await d.json();
       if (!d.ok) throw new Error(json.error || 'Error');
       if (updateUser) updateUser(json.user);
