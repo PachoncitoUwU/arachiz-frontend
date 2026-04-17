@@ -807,7 +807,16 @@ function SnakeGame({ onClose, currentUser }) {
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [showShop, setShowShop] = useState(false);
   const [equippedSkin, setEquippedSkin] = useState(null);
+  // Refs para que drawGame (closure estático) siempre lea el valor actual
+  const snakeColorRef   = useRef('#00ff88');
+  const foodEmojiRef    = useRef('🍎');
+  const equippedSkinRef = useRef(null);
   const W = COLS*CELL, H = ROWS*CELL;
+
+  // Sincronizar refs con estado para que drawGame siempre lea el valor actual
+  useEffect(() => { snakeColorRef.current = snakeColor; }, [snakeColor]);
+  useEffect(() => { foodEmojiRef.current = foodEmoji; }, [foodEmoji]);
+  useEffect(() => { equippedSkinRef.current = equippedSkin; }, [equippedSkin]);
 
   // Cargar leaderboard desde el servidor al abrir
   useEffect(()=>{
@@ -827,7 +836,9 @@ function SnakeGame({ onClose, currentUser }) {
       const equipped = data.userSkins?.find(us => us.equipped);
       if (equipped) {
         setEquippedSkin(equipped.skin);
+        equippedSkinRef.current = equipped.skin;
         setSnakeColor(equipped.skin.headColor);
+        snakeColorRef.current = equipped.skin.headColor;
       }
     } catch (error) {
       console.error('Error loading equipped skin:', error);
@@ -836,7 +847,9 @@ function SnakeGame({ onClose, currentUser }) {
 
   const handleEquipSkin = (skin) => {
     setEquippedSkin(skin);
+    equippedSkinRef.current = skin;
     setSnakeColor(skin.headColor);
+    snakeColorRef.current = skin.headColor;
   };
 
   const randFood=(snake)=>{let f;do{f=[Math.floor(Math.random()*COLS),Math.floor(Math.random()*ROWS)];}while(snake.some(c=>c[0]===f[0]&&c[1]===f[1]));return f;};
@@ -852,9 +865,9 @@ function SnakeGame({ onClose, currentUser }) {
     ctx.fillRect(0,0,W,H);
     
     // Aplicar efectos de skin si hay una equipada
-    const skin = equippedSkin;
-    let bodyColor = snakeColor;
-    let headColor = snakeColor;
+    const skin = equippedSkinRef.current;
+    let bodyColor = snakeColorRef.current;
+    let headColor = snakeColorRef.current;
     
     if (skin) {
       bodyColor = skin.bodyColor;
@@ -993,7 +1006,7 @@ function SnakeGame({ onClose, currentUser }) {
     ctx.font = `${CELL-2}px serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(foodEmoji, fx*CELL+CELL/2, fy*CELL+CELL/2);
+    ctx.fillText(foodEmojiRef.current, fx*CELL+CELL/2, fy*CELL+CELL/2);
   };
 
   const loop=(ts)=>{
@@ -1021,11 +1034,6 @@ function SnakeGame({ onClose, currentUser }) {
   };
 
   const startGame=()=>{
-    // Preservar la skin equipada al reiniciar
-    if (equippedSkin) {
-      setSnakeColor(equippedSkin.headColor);
-    }
-    
     gRef.current={
       snake:[[8,6],[7,6],[6,6],[5,6]],
       food:[12,4],
@@ -1033,7 +1041,7 @@ function SnakeGame({ onClose, currentUser }) {
       nextDir:[1,0],
       dirQueue:[],
       score:0,
-      speed:120, // Velocidad inicial más lenta para móvil
+      speed:120,
       lastTick:0,
       dead:false
     };
@@ -1286,7 +1294,7 @@ function SnakeGame({ onClose, currentUser }) {
                 <div style={{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap',justifyContent:'center'}}>
                   <span style={{fontSize:12,fontWeight:600,color:'#6e6e73'}}>Color:</span>
                   {['#00ff88','#ff4757','#3742fa','#ffa502','#7bed9f','#ff6b6b'].map(color=>(
-                    <button key={color} onClick={()=>setSnakeColor(color)}
+                    <button key={color} onClick={()=>{ setSnakeColor(color); snakeColorRef.current=color; equippedSkinRef.current=null; setEquippedSkin(null); }}
                       style={{width:24,height:24,borderRadius:12,background:color,border:snakeColor===color?'2px solid #1d1d1f':'1px solid rgba(255,255,255,0.3)',cursor:'pointer'}}/>
                   ))}
                   <button onClick={()=>setShowColorPicker(true)}
@@ -1295,7 +1303,7 @@ function SnakeGame({ onClose, currentUser }) {
                 <div style={{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap',justifyContent:'center'}}>
                   <span style={{fontSize:12,fontWeight:600,color:'#6e6e73'}}>Comida:</span>
                   {['🍎','🍊','🍌','🍇','🍓','🥕','🍒','🥝'].map(emoji=>(
-                    <button key={emoji} onClick={()=>setFoodEmoji(emoji)}
+                    <button key={emoji} onClick={()=>{ setFoodEmoji(emoji); foodEmojiRef.current=emoji; }}
                       style={{fontSize:16,background:foodEmoji===emoji?'rgba(0,122,255,0.2)':'transparent',border:foodEmoji===emoji?'1px solid #007aff':'1px solid rgba(255,255,255,0.3)',borderRadius:8,padding:'4px 6px',cursor:'pointer'}}>{emoji}</button>
                   ))}
                   <button onClick={()=>setShowEmojiPicker(true)}
@@ -1308,7 +1316,7 @@ function SnakeGame({ onClose, currentUser }) {
                 <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.5)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1000}} onClick={()=>setShowColorPicker(false)}>
                   <div style={{background:'white',borderRadius:16,padding:20,maxWidth:300}} onClick={e=>e.stopPropagation()}>
                     <h3 style={{margin:'0 0 15px',fontSize:16,fontWeight:700}}>Elige un color</h3>
-                    <input type="color" value={snakeColor} onChange={e=>setSnakeColor(e.target.value)}
+                    <input type="color" value={snakeColor} onChange={e=>{ setSnakeColor(e.target.value); snakeColorRef.current=e.target.value; equippedSkinRef.current=null; setEquippedSkin(null); }}}
                       style={{width:'100%',height:40,border:'none',borderRadius:8,cursor:'pointer'}}/>
                     <div style={{display:'flex',gap:8,marginTop:15,justifyContent:'flex-end'}}>
                       <button onClick={()=>setShowColorPicker(false)}
@@ -1327,7 +1335,7 @@ function SnakeGame({ onClose, currentUser }) {
                     <h3 style={{margin:'0 0 15px',fontSize:16,fontWeight:700}}>Elige un emoji</h3>
                     <div style={{display:'grid',gridTemplateColumns:'repeat(8, 1fr)',gap:8}}>
                       {['🍎','🍊','🍌','🍇','🍓','🥕','🍒','🥝','🍑','🥭','🍍','🥥','🫐','🍈','🍉','🍋','🥑','🍅','🌶️','🥒','🥬','🥦','🧄','🧅','🌽','🥖','🍞','🥨','🧀','🥚','🍳','🥓','🥩','🍗','🍖','🌭','🍔','🍟','🍕','🥪','🌮','🌯','🥙','🧆','🥘','🍝','🍜','🍲','🍛','🍣','🍱','🥟','🦪','🍤','🍙','🍚','🍘','🍥','🥠','🥮','🍢','🍡','🍧','🍨','🍦','🥧','🧁','🎂','🍰','🍪','🍫','🍬','🍭'].map(emoji=>(
-                        <button key={emoji} onClick={()=>{setFoodEmoji(emoji);setShowEmojiPicker(false);}}
+                        <button key={emoji} onClick={()=>{ setFoodEmoji(emoji); foodEmojiRef.current=emoji; setShowEmojiPicker(false); }}
                           style={{fontSize:20,padding:8,border:'1px solid #ddd',borderRadius:8,background:'white',cursor:'pointer',transition:'background 0.2s'}}
                           onMouseEnter={e=>e.target.style.background='#f0f0f0'}
                           onMouseLeave={e=>e.target.style.background='white'}>{emoji}</button>
