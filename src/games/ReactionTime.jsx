@@ -30,12 +30,35 @@ const trySaveBackend = async (score) => {
   try {
     const token = localStorage.getItem('token');
     const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+    // Intentar con el endpoint de games
     await fetch(`${API_URL}/games/reaction/score`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       body: JSON.stringify({ score }),
     });
   } catch {}
+};
+
+// Traer ranking del backend y combinarlo con el local
+const fetchAndMergeLB = async () => {
+  try {
+    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+    const res  = await fetch(`${API_URL}/games/reaction/leaderboard`);
+    const data = await res.json();
+    if (data.scores?.length) {
+      // Combinar con local, ordenar desc, deduplicar por nombre
+      const local = getLocalLB();
+      const combined = [...data.scores, ...local];
+      const seen = new Set();
+      const deduped = combined
+        .sort((a, b) => b.score - a.score)
+        .filter(e => { if (seen.has(e.name)) return false; seen.add(e.name); return true; })
+        .slice(0, 10);
+      localStorage.setItem(LS_KEY, JSON.stringify(deduped));
+      return deduped;
+    }
+  } catch {}
+  return getLocalLB();
 };
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -115,6 +138,8 @@ export default function ReactionTime({ onClose, currentUser }) {
   const AREA_H = isMobile ? 300 : 380;
 
   useEffect(() => {
+    // Al abrir, traer ranking del backend y combinar con local
+    fetchAndMergeLB().then(merged => setLb(merged));
     const f = () => setIsMobile(window.innerWidth < 700);
     window.addEventListener('resize', f);
     return () => window.removeEventListener('resize', f);
@@ -147,11 +172,15 @@ export default function ReactionTime({ onClose, currentUser }) {
   // Guardar al terminar
   useEffect(() => {
     if (phase === 'done' && scoreRef.current > 0) {
-      const name   = currentUser?.fullName || localStorage.getItem('userName') || 'Jugador';
+      const name   = currentUser?.fullName || 'Jugador';
       const avatar = currentUser?.avatarUrl || null;
+      // 1. Guardar local inmediatamente
       const updated = saveLocalScore(scoreRef.current, name, avatar);
       setLb(updated);
-      trySaveBackend(scoreRef.current); // best-effort al backend
+      // 2. Intentar backend y refrescar ranking combinado
+      trySaveBackend(scoreRef.current).then(() =>
+        fetchAndMergeLB().then(merged => setLb(merged))
+      );
     }
   }, [phase]);
 
