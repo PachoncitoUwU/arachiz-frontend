@@ -8,6 +8,29 @@ const RARITY = {
   mythic:    { label:'Mítica',    color:'#ef4444', glow:'rgba(239,68,68,0.6)',   bg:'rgba(239,68,68,0.15)'   },
 };
 
+// Skins locales — se usan si el backend no responde
+const LOCAL_SKINS = [
+  { id:'local-1',  name:'Clásica',            description:'La serpiente de toda la vida.',                                    price:0,     rarity:'common',    headColor:'#00ff88', bodyColor:'#00cc6a', pattern:'solid',    trailEffect:'none',      eyeStyle:'normal', isDefault:true  },
+  { id:'local-2',  name:'Océano',             description:'Azul profundo como el mar.',                                       price:1500,  rarity:'common',    headColor:'#0ea5e9', bodyColor:'#0284c7', pattern:'solid',    trailEffect:'none',      eyeStyle:'normal', isDefault:false },
+  { id:'local-3',  name:'Lava',               description:'Rojo ardiente. Peligrosa y apasionada.',                           price:1500,  rarity:'common',    headColor:'#ef4444', bodyColor:'#dc2626', pattern:'solid',    trailEffect:'none',      eyeStyle:'normal', isDefault:false },
+  { id:'local-4',  name:'Amatista',           description:'Morado profundo con brillo cristalino.',                           price:2000,  rarity:'common',    headColor:'#a855f7', bodyColor:'#7c3aed', pattern:'solid',    trailEffect:'none',      eyeStyle:'normal', isDefault:false },
+  { id:'local-5',  name:'Naranja Neón',       description:'Vibrante y llamativa.',                                            price:2000,  rarity:'common',    headColor:'#fb923c', bodyColor:'#ea580c', pattern:'solid',    trailEffect:'none',      eyeStyle:'normal', isDefault:false },
+  { id:'local-6',  name:'Hielo Ártico',       description:'Cristales de hielo que dejan un rastro helado.',                   price:3500,  rarity:'rare',      headColor:'#e0f7ff', bodyColor:'#7dd3fc', pattern:'ice',      trailEffect:'ice',       eyeStyle:'normal', isDefault:false },
+  { id:'local-7',  name:'Degradado Solar',    description:'Transición de colores cálidos del amanecer al atardecer.',         price:4000,  rarity:'rare',      headColor:'#fbbf24', bodyColor:'#f97316', pattern:'gradient', trailEffect:'sparkles',  eyeStyle:'normal', isDefault:false },
+  { id:'local-8',  name:'Neón Verde',         description:'Brilla en la oscuridad. Efecto neón puro.',                        price:4500,  rarity:'rare',      headColor:'#00ff88', bodyColor:'#00cc6a', pattern:'neon',     trailEffect:'sparkles',  eyeStyle:'normal', isDefault:false },
+  { id:'local-9',  name:'Neón Rosa',          description:'Rosa eléctrico con aura brillante. Estilo cyberpunk.',             price:4500,  rarity:'rare',      headColor:'#f472b6', bodyColor:'#ec4899', pattern:'neon',     trailEffect:'hearts',    eyeStyle:'cute',   isDefault:false },
+  { id:'local-10', name:'Estrellas',          description:'Deja un rastro de estrellas doradas a su paso.',                   price:5000,  rarity:'rare',      headColor:'#fbbf24', bodyColor:'#d97706', pattern:'solid',    trailEffect:'stars',     eyeStyle:'normal', isDefault:false },
+  { id:'local-11', name:'Dragón de Fuego',    description:'Llamas que consumen todo a su paso. Poder puro.',                  price:7000,  rarity:'epic',      headColor:'#ffd700', bodyColor:'#ff4500', pattern:'fire',     trailEffect:'fire',      eyeStyle:'angry',  isDefault:false },
+  { id:'local-12', name:'Arcoíris',           description:'Todos los colores del espectro en una sola serpiente.',            price:8000,  rarity:'epic',      headColor:'#ff0080', bodyColor:'#0080ff', pattern:'rainbow',  trailEffect:'sparkles',  eyeStyle:'cute',   isDefault:false },
+  { id:'local-13', name:'Galaxia',            description:'El cosmos en tu serpiente. Morado profundo con estrellas.',        price:9000,  rarity:'epic',      headColor:'#c084fc', bodyColor:'#4a148c', pattern:'galaxy',   trailEffect:'stars',     eyeStyle:'normal', isDefault:false },
+  { id:'local-14', name:'Rayo',               description:'Velocidad eléctrica. Deja rayos a su paso.',                       price:10000, rarity:'epic',      headColor:'#fde047', bodyColor:'#ca8a04', pattern:'neon',     trailEffect:'lightning', eyeStyle:'laser',  isDefault:false },
+  { id:'local-15', name:'Neón Azul Eléctrico',description:'Azul eléctrico que ilumina la oscuridad.',                         price:10000, rarity:'epic',      headColor:'#60a5fa', bodyColor:'#2563eb', pattern:'neon',     trailEffect:'lightning', eyeStyle:'laser',  isDefault:false },
+  { id:'local-16', name:'Serpiente Dorada',   description:'Oro puro. Solo los mejores merecen esta skin.',                    price:15000, rarity:'legendary', headColor:'#ffd700', bodyColor:'#ffb300', pattern:'gold',     trailEffect:'sparkles',  eyeStyle:'normal', isDefault:false },
+  { id:'local-17', name:'Fénix',              description:'Renace de las llamas. Degradado épico de fuego y oro.',            price:20000, rarity:'legendary', headColor:'#ffd700', bodyColor:'#ff4500', pattern:'fire',     trailEffect:'fire',      eyeStyle:'laser',  isDefault:false },
+  { id:'local-18', name:'Cosmos Infinito',    description:'Galaxia + arcoíris. La skin más hermosa del universo.',            price:22000, rarity:'legendary', headColor:'#c084fc', bodyColor:'#1a0030', pattern:'galaxy',   trailEffect:'void',      eyeStyle:'laser',  isDefault:false },
+  { id:'local-19', name:'☠️ El Vacío',        description:'Oscuridad absoluta. Solo los más valientes se atreven.',           price:35000, rarity:'mythic',    headColor:'#c084fc', bodyColor:'#0d0020', pattern:'void',     trailEffect:'void',      eyeStyle:'laser',  isDefault:false },
+  { id:'local-20', name:'👑 Serpiente Suprema',description:'La skin definitiva. Arcoíris + fuego + rayos. Eres una leyenda.',price:50000, rarity:'mythic',    headColor:'#ffd700', bodyColor:'#ff0080', pattern:'rainbow',  trailEffect:'lightning', eyeStyle:'laser',  isDefault:false },
+];
 // Preview SVG de la serpiente para cada skin
 function SkinPreview({ skin }) {
   const id = `s${skin.id || skin.name.replace(/\s/g,'')}`;
@@ -186,9 +209,13 @@ export default function SnakeShop({ onClose, onEquipSkin }) {
       ]);
       const skinsData = await skinsRes.json();
       const userData  = await userRes.json();
-      setAllSkins(skinsData.skins || []);
+      // Si el backend devuelve skins, usarlas; si no, usar las locales
+      setAllSkins(skinsData.skins?.length ? skinsData.skins : LOCAL_SKINS);
       setUserSkins(userData.userSkins || []);
-    } catch (e) { console.error(e); }
+    } catch (e) {
+      console.error(e);
+      setAllSkins(LOCAL_SKINS); // fallback local
+    }
     finally { setLoading(false); }
   };
 
