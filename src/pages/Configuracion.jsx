@@ -929,33 +929,76 @@ function SnakeGame({ onClose, currentUser }) {
     }
     ctx.shadowBlur = 0;
 
-    // ── Ojos (más hacia el centro, menos al frente) ───────────────────────
+    // ── Ojos con expresión según rareza/eyeStyle ─────────────────────────
     if (g.snake.length > 0) {
       const [hx,hy] = g.snake[0];
       const [dx,dy] = g.dir;
-      // o = offset lateral, f = offset hacia adelante (reducido para que queden más atrás)
-      const o = 4, f = 2;
+      const cx = hx*CELL+CELL/2, cy = hy*CELL+CELL/2;
+      const o = 4, f = 1; // lateral y adelante
       let e1x,e1y,e2x,e2y;
-      if (dx===1)       { e1x=hx*CELL+CELL/2+f; e1y=hy*CELL+CELL/2-o; e2x=hx*CELL+CELL/2+f; e2y=hy*CELL+CELL/2+o; }
-      else if (dx===-1) { e1x=hx*CELL+CELL/2-f; e1y=hy*CELL+CELL/2-o; e2x=hx*CELL+CELL/2-f; e2y=hy*CELL+CELL/2+o; }
-      else if (dy===1)  { e1x=hx*CELL+CELL/2-o; e1y=hy*CELL+CELL/2+f; e2x=hx*CELL+CELL/2+o; e2y=hy*CELL+CELL/2+f; }
-      else              { e1x=hx*CELL+CELL/2-o; e1y=hy*CELL+CELL/2-f; e2x=hx*CELL+CELL/2+o; e2y=hy*CELL+CELL/2-f; }
+      if (dx===1)       { e1x=cx+f; e1y=cy-o; e2x=cx+f; e2y=cy+o; }
+      else if (dx===-1) { e1x=cx-f; e1y=cy-o; e2x=cx-f; e2y=cy+o; }
+      else if (dy===1)  { e1x=cx-o; e1y=cy+f; e2x=cx+o; e2y=cy+f; }
+      else              { e1x=cx-o; e1y=cy-f; e2x=cx+o; e2y=cy-f; }
 
-      const eyeR = eyeStyle === 'cute' ? 3 : 2.5;
-      const pupilR = eyeStyle === 'cute' ? 1.8 : 1.4;
-      const eyeCol = eyeStyle === 'laser' ? '#ff2200' : '#fff';
-      const pupilCol = eyeStyle === 'angry' ? '#ff0000' : '#111';
+      if (eyeStyle === 'cute') {
+        // 😊 Ojos grandes y redondos — skins baratas/comunes
+        ctx.fillStyle = '#fff';
+        ctx.beginPath(); ctx.arc(e1x,e1y,3.5,0,Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(e2x,e2y,3.5,0,Math.PI*2); ctx.fill();
+        // Pupila con brillo
+        ctx.fillStyle = '#222';
+        ctx.beginPath(); ctx.arc(e1x,e1y,2,0,Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(e2x,e2y,2,0,Math.PI*2); ctx.fill();
+        // Brillo blanco
+        ctx.fillStyle = '#fff';
+        ctx.beginPath(); ctx.arc(e1x+0.8,e1y-0.8,0.7,0,Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(e2x+0.8,e2y-0.8,0.7,0,Math.PI*2); ctx.fill();
 
-      if (eyeStyle === 'laser') { ctx.shadowColor='#ff0000'; ctx.shadowBlur=6; }
-      ctx.fillStyle = eyeCol;
-      ctx.beginPath(); ctx.arc(e1x,e1y,eyeR,0,Math.PI*2); ctx.fill();
-      ctx.beginPath(); ctx.arc(e2x,e2y,eyeR,0,Math.PI*2); ctx.fill();
-      ctx.shadowBlur = 0;
+      } else if (eyeStyle === 'angry') {
+        // 😠 Ojos con cejas fruncidas — skins épicas
+        ctx.fillStyle = '#fff';
+        ctx.beginPath(); ctx.arc(e1x,e1y,3,0,Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(e2x,e2y,3,0,Math.PI*2); ctx.fill();
+        ctx.fillStyle = '#cc0000';
+        ctx.beginPath(); ctx.arc(e1x,e1y,1.8,0,Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(e2x,e2y,1.8,0,Math.PI*2); ctx.fill();
+        // Cejas fruncidas (líneas diagonales)
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 1.2;
+        ctx.lineCap = 'round';
+        if (dx===1||dx===-1) {
+          ctx.beginPath(); ctx.moveTo(e1x-2,e1y-3.5); ctx.lineTo(e1x+2,e1y-2.5); ctx.stroke();
+          ctx.beginPath(); ctx.moveTo(e2x-2,e2y+2.5); ctx.lineTo(e2x+2,e2y+3.5); ctx.stroke();
+        } else {
+          ctx.beginPath(); ctx.moveTo(e1x-3.5,e1y-2); ctx.lineTo(e1x-2.5,e1y+2); ctx.stroke();
+          ctx.beginPath(); ctx.moveTo(e2x+2.5,e2y-2); ctx.lineTo(e2x+3.5,e2y+2); ctx.stroke();
+        }
 
-      if (eyeStyle !== 'laser') {
-        ctx.fillStyle = pupilCol;
-        ctx.beginPath(); ctx.arc(e1x,e1y,pupilR,0,Math.PI*2); ctx.fill();
-        ctx.beginPath(); ctx.arc(e2x,e2y,pupilR,0,Math.PI*2); ctx.fill();
+      } else if (eyeStyle === 'laser') {
+        // 🔴 Ojos láser — skins míticas/legendarias
+        ctx.shadowColor = '#ff0000'; ctx.shadowBlur = 10;
+        ctx.fillStyle = '#ff0000';
+        ctx.beginPath(); ctx.arc(e1x,e1y,3,0,Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(e2x,e2y,3,0,Math.PI*2); ctx.fill();
+        ctx.fillStyle = '#ff6600';
+        ctx.beginPath(); ctx.arc(e1x,e1y,1.5,0,Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(e2x,e2y,1.5,0,Math.PI*2); ctx.fill();
+        // Rayos láser
+        ctx.strokeStyle = 'rgba(255,0,0,0.6)'; ctx.lineWidth = 1;
+        const laserLen = 6;
+        ctx.beginPath(); ctx.moveTo(e1x+dx*3,e1y+dy*3); ctx.lineTo(e1x+dx*(3+laserLen),e1y+dy*(3+laserLen)); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(e2x+dx*3,e2y+dy*3); ctx.lineTo(e2x+dx*(3+laserLen),e2y+dy*(3+laserLen)); ctx.stroke();
+        ctx.shadowBlur = 0;
+
+      } else {
+        // 😐 Ojos normales — skins raras/default
+        ctx.fillStyle = '#fff';
+        ctx.beginPath(); ctx.arc(e1x,e1y,2.8,0,Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(e2x,e2y,2.8,0,Math.PI*2); ctx.fill();
+        ctx.fillStyle = '#222';
+        ctx.beginPath(); ctx.arc(e1x,e1y,1.5,0,Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(e2x,e2y,1.5,0,Math.PI*2); ctx.fill();
       }
     }
 
@@ -1156,16 +1199,16 @@ function SnakeGame({ onClose, currentUser }) {
   useEffect(()=>{const f=()=>setIsMobile(window.innerWidth<700);window.addEventListener('resize',f);return()=>window.removeEventListener('resize',f);},[]);
 
   const glassPanel = {
-    background:'rgba(255,255,255,0.08)',
-    backdropFilter:'blur(12px)',
-    WebkitBackdropFilter:'blur(12px)',
-    border:'1px solid rgba(255,255,255,0.3)',
+    background:'rgba(255,255,255,0.06)',
+    backdropFilter:'blur(8px)',
+    WebkitBackdropFilter:'blur(8px)',
+    border:'1px solid rgba(255,255,255,0.25)',
     borderRadius:28,
-    boxShadow:'0 4px 24px rgba(0,0,0,0.05), inset 0 1px 0 rgba(255,255,255,0.6)',
+    boxShadow:'0 2px 16px rgba(0,0,0,0.04), inset 0 1px 0 rgba(255,255,255,0.5)',
   };
 
   return (
-    <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.12)',backdropFilter:'blur(24px)',WebkitBackdropFilter:'blur(24px)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:200,padding:12,overflowY:'auto'}} onClick={onClose}>
+    <div style={{position:'fixed',inset:0,background:'rgba(255,255,255,0.04)',backdropFilter:'blur(6px)',WebkitBackdropFilter:'blur(6px)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:200,padding:12,overflowY:'auto'}} onClick={onClose}>
       <div style={{display:'flex',flexDirection:isMobile?'column':'row',gap:12,alignItems:'flex-start',maxWidth:'98vw'}} onClick={e=>e.stopPropagation()}>
 
         {/* LB — siempre visible a la izquierda en desktop */}
