@@ -921,14 +921,9 @@ function SnakeGame({ onClose, currentUser }) {
       ctx.stroke();
     }
 
-    // ── Cabeza (mismo tamaño que cuerpo, solo color diferente) ────────────
+    // ── Cabeza (mismo color que cuerpo, solo ojos) ────────────────────────
     if (g.snake.length > 0) {
       const [hx,hy] = g.snake[0];
-      ctx.shadowBlur = 0;
-      ctx.fillStyle = headFill;
-      ctx.beginPath();
-      ctx.arc(hx*CELL+CELL/2, hy*CELL+CELL/2, R, 0, Math.PI*2);
-      ctx.fill();
 
       // ── Ojos pequeños y limpios ──────────────────────────────────────────
       const [dx,dy] = g.dir;
@@ -1154,12 +1149,12 @@ function SnakeGame({ onClose, currentUser }) {
   useEffect(()=>{const f=()=>setIsMobile(window.innerWidth<700);window.addEventListener('resize',f);return()=>window.removeEventListener('resize',f);},[]);
 
   const glassPanel = {
-    background:'rgba(255,255,255,0.28)',
-    backdropFilter:'blur(40px) saturate(180%)',
-    WebkitBackdropFilter:'blur(40px) saturate(180%)',
-    border:'1px solid rgba(255,255,255,0.55)',
+    background:'rgba(255,255,255,0.15)',
+    backdropFilter:'blur(20px)',
+    WebkitBackdropFilter:'blur(20px)',
+    border:'1px solid rgba(255,255,255,0.4)',
     borderRadius:28,
-    boxShadow:'0 20px 60px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,0.8)',
+    boxShadow:'0 8px 32px rgba(0,0,0,0.06)',
   };
 
   return (
