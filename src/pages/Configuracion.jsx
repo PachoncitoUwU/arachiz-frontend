@@ -812,12 +812,13 @@ function SnakeGame({ onClose, currentUser }) {
   const equippedSkinRef = useRef(null);
   
   // Refs para canvas puro (sin SVG overlay)
+  const gradCacheRef = useRef(null); // { skinId, bodyFill, headFill }
   const W = COLS*CELL, H = ROWS*CELL;
 
   // Sincronizar refs con estado para que drawGame siempre lea el valor actual
-  useEffect(() => { snakeColorRef.current = snakeColor; }, [snakeColor]);
+  useEffect(() => { snakeColorRef.current = snakeColor; gradCacheRef.current = null; }, [snakeColor]);
   useEffect(() => { foodEmojiRef.current = foodEmoji; }, [foodEmoji]);
-  useEffect(() => { equippedSkinRef.current = equippedSkin; }, [equippedSkin]);
+  useEffect(() => { equippedSkinRef.current = equippedSkin; gradCacheRef.current = null; }, [equippedSkin]);
 
   // Cargar leaderboard desde el servidor al abrir
   useEffect(()=>{
@@ -858,63 +859,57 @@ function SnakeGame({ onClose, currentUser }) {
   const drawGame=(g,ctx)=>{
     ctx.clearRect(0,0,W,H);
 
-    // Fondo claro y limpio
-    ctx.fillStyle='rgba(248,250,252,0.85)';
+    // Fondo claro
+    ctx.fillStyle='rgba(248,250,252,0.9)';
     ctx.fillRect(0,0,W,H);
 
     const skin = equippedSkinRef.current;
     const baseColor = snakeColorRef.current;
+    const cacheKey = skin ? (skin.id||skin.name||skin.pattern) : baseColor;
 
-    // ── Crear gradiente según patrón ──────────────────────────────────────
-    const getBodyFill = () => {
-      if (!skin) return baseColor;
-      const p = skin.pattern;
-      if (p === 'solid') return skin.bodyColor;
-      if (p === 'gradient') {
-        const g2 = ctx.createLinearGradient(0,0,W,H);
-        g2.addColorStop(0, skin.headColor); g2.addColorStop(1, skin.bodyColor); return g2;
+    // ── Gradiente cacheado — solo se recrea cuando cambia la skin ─────────
+    if (!gradCacheRef.current || gradCacheRef.current.key !== cacheKey) {
+      let bodyFill = baseColor;
+      const p = skin?.pattern;
+      if (skin) {
+        if (p === 'solid')    bodyFill = skin.bodyColor;
+        else if (p === 'neon') bodyFill = skin.bodyColor;
+        else if (p === 'gradient') {
+          const g2=ctx.createLinearGradient(0,0,W,H);
+          g2.addColorStop(0,skin.headColor); g2.addColorStop(1,skin.bodyColor); bodyFill=g2;
+        } else if (p === 'rainbow') {
+          const g2=ctx.createLinearGradient(0,0,W,0);
+          g2.addColorStop(0,'#ff0080'); g2.addColorStop(0.2,'#ff8000');
+          g2.addColorStop(0.4,'#ffff00'); g2.addColorStop(0.6,'#00ff80');
+          g2.addColorStop(0.8,'#0080ff'); g2.addColorStop(1,'#8000ff'); bodyFill=g2;
+        } else if (p === 'galaxy') {
+          const g2=ctx.createRadialGradient(W/2,H/2,0,W/2,H/2,Math.max(W,H)/2);
+          g2.addColorStop(0,'#c084fc'); g2.addColorStop(0.5,'#4a148c'); g2.addColorStop(1,'#000'); bodyFill=g2;
+        } else if (p === 'fire') {
+          const g2=ctx.createLinearGradient(0,H,0,0);
+          g2.addColorStop(0,'#ff0000'); g2.addColorStop(0.5,'#ff6b00'); g2.addColorStop(1,'#ffd700'); bodyFill=g2;
+        } else if (p === 'ice') {
+          const g2=ctx.createLinearGradient(0,0,W,H);
+          g2.addColorStop(0,'#e0f7ff'); g2.addColorStop(0.5,'#7dd3fc'); g2.addColorStop(1,'#0ea5e9'); bodyFill=g2;
+        } else if (p === 'gold') {
+          const g2=ctx.createLinearGradient(0,0,W,H);
+          g2.addColorStop(0,'#ffd700'); g2.addColorStop(0.5,'#ffb300'); g2.addColorStop(1,'#ff8c00'); bodyFill=g2;
+        } else if (p === 'void') {
+          const g2=ctx.createRadialGradient(W/2,H/2,0,W/2,H/2,Math.max(W,H)/2);
+          g2.addColorStop(0,'#1a0030'); g2.addColorStop(0.6,'#0d0020'); g2.addColorStop(1,'#000'); bodyFill=g2;
+        } else bodyFill = skin.bodyColor;
       }
-      if (p === 'rainbow') {
-        const g2 = ctx.createLinearGradient(0,0,W,0);
-        g2.addColorStop(0,'#ff0080'); g2.addColorStop(0.2,'#ff8000');
-        g2.addColorStop(0.4,'#ffff00'); g2.addColorStop(0.6,'#00ff80');
-        g2.addColorStop(0.8,'#0080ff'); g2.addColorStop(1,'#8000ff'); return g2;
-      }
-      if (p === 'galaxy') {
-        const g2 = ctx.createRadialGradient(W/2,H/2,0,W/2,H/2,Math.max(W,H)/2);
-        g2.addColorStop(0,'#c084fc'); g2.addColorStop(0.5,'#4a148c'); g2.addColorStop(1,'#000'); return g2;
-      }
-      if (p === 'fire') {
-        const g2 = ctx.createLinearGradient(0,H,0,0);
-        g2.addColorStop(0,'#ff0000'); g2.addColorStop(0.5,'#ff6b00'); g2.addColorStop(1,'#ffd700'); return g2;
-      }
-      if (p === 'ice') {
-        const g2 = ctx.createLinearGradient(0,0,W,H);
-        g2.addColorStop(0,'#e0f7ff'); g2.addColorStop(0.5,'#7dd3fc'); g2.addColorStop(1,'#0ea5e9'); return g2;
-      }
-      if (p === 'gold') {
-        const g2 = ctx.createLinearGradient(0,0,W,H);
-        g2.addColorStop(0,'#ffd700'); g2.addColorStop(0.5,'#ffb300'); g2.addColorStop(1,'#ff8c00'); return g2;
-      }
-      if (p === 'void') {
-        const g2 = ctx.createRadialGradient(W/2,H/2,0,W/2,H/2,Math.max(W,H)/2);
-        g2.addColorStop(0,'#1a0030'); g2.addColorStop(0.6,'#0d0020'); g2.addColorStop(1,'#000'); return g2;
-      }
-      if (p === 'neon') return skin.bodyColor;
-      return skin.bodyColor || baseColor;
-    };
-
-    const bodyFill = getBodyFill();
-    const headFill = skin ? skin.headColor : baseColor;
+      gradCacheRef.current = { key: cacheKey, bodyFill, headFill: skin?.headColor || baseColor };
+    }
+    const { bodyFill, headFill } = gradCacheRef.current;
+    const eyeStyle = skin?.eyeStyle || 'normal';
+    const R = (CELL-5)/2; // radio del cuerpo
 
     // ── Neon glow ─────────────────────────────────────────────────────────
-    if (skin?.pattern === 'neon') {
-      ctx.shadowColor = skin.bodyColor;
-      ctx.shadowBlur = 14;
-    }
+    if (skin?.pattern === 'neon') { ctx.shadowColor=skin.bodyColor; ctx.shadowBlur=12; }
 
-    // ── Cuerpo (línea continua) ───────────────────────────────────────────
-    if (g.snake.length > 1) {
+    // ── Cuerpo + cabeza como línea continua (mismo grosor) ────────────────
+    if (g.snake.length > 0) {
       ctx.strokeStyle = bodyFill;
       ctx.lineWidth = CELL - 5;
       ctx.lineCap = 'round';
@@ -926,39 +921,40 @@ function SnakeGame({ onClose, currentUser }) {
       ctx.stroke();
     }
 
-    // ── Cabeza ────────────────────────────────────────────────────────────
-    const [hx,hy] = g.snake[0];
-    ctx.shadowBlur = 0;
-    ctx.fillStyle = headFill;
-    ctx.beginPath();
-    ctx.arc(hx*CELL+CELL/2, hy*CELL+CELL/2, CELL/2-1, 0, Math.PI*2);
-    ctx.fill();
+    // ── Cabeza (mismo tamaño que cuerpo, solo color diferente) ────────────
+    if (g.snake.length > 0) {
+      const [hx,hy] = g.snake[0];
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = headFill;
+      ctx.beginPath();
+      ctx.arc(hx*CELL+CELL/2, hy*CELL+CELL/2, R, 0, Math.PI*2);
+      ctx.fill();
 
-    // ── Ojos simples y limpios ────────────────────────────────────────────
-    const [dx,dy] = g.dir;
-    const eyeOffset = 6;
-    let e1x,e1y,e2x,e2y;
-    if (dx===1)       { e1x=hx*CELL+16; e1y=hy*CELL+7;  e2x=hx*CELL+16; e2y=hy*CELL+17; }
-    else if (dx===-1) { e1x=hx*CELL+8;  e1y=hy*CELL+7;  e2x=hx*CELL+8;  e2y=hy*CELL+17; }
-    else if (dy===1)  { e1x=hx*CELL+7;  e1y=hy*CELL+16; e2x=hx*CELL+17; e2y=hy*CELL+16; }
-    else              { e1x=hx*CELL+7;  e1y=hy*CELL+8;  e2x=hx*CELL+17; e2y=hy*CELL+8;  }
+      // ── Ojos pequeños y limpios ──────────────────────────────────────────
+      const [dx,dy] = g.dir;
+      let e1x,e1y,e2x,e2y;
+      const o = 5; // offset desde el centro
+      if (dx===1)       { e1x=hx*CELL+CELL/2+o; e1y=hy*CELL+CELL/2-o; e2x=hx*CELL+CELL/2+o; e2y=hy*CELL+CELL/2+o; }
+      else if (dx===-1) { e1x=hx*CELL+CELL/2-o; e1y=hy*CELL+CELL/2-o; e2x=hx*CELL+CELL/2-o; e2y=hy*CELL+CELL/2+o; }
+      else if (dy===1)  { e1x=hx*CELL+CELL/2-o; e1y=hy*CELL+CELL/2+o; e2x=hx*CELL+CELL/2+o; e2y=hy*CELL+CELL/2+o; }
+      else              { e1x=hx*CELL+CELL/2-o; e1y=hy*CELL+CELL/2-o; e2x=hx*CELL+CELL/2+o; e2y=hy*CELL+CELL/2-o; }
 
-    const eyeStyle = skin?.eyeStyle || 'normal';
-    const eyeR = eyeStyle === 'cute' ? 4.5 : 3.5;
-    const pupilR = eyeStyle === 'cute' ? 2.5 : 2;
-    const eyeCol = eyeStyle === 'laser' ? '#ff2200' : '#fff';
-    const pupilCol = eyeStyle === 'angry' ? '#ff0000' : '#111';
+      const eyeR = eyeStyle === 'cute' ? 3.5 : 2.5;
+      const pupilR = eyeStyle === 'cute' ? 2 : 1.5;
+      const eyeCol = eyeStyle === 'laser' ? '#ff2200' : '#fff';
+      const pupilCol = eyeStyle === 'angry' ? '#ff0000' : '#111';
 
-    if (eyeStyle === 'laser') ctx.shadowColor='#ff0000', ctx.shadowBlur=8;
-    ctx.fillStyle = eyeCol;
-    ctx.beginPath(); ctx.arc(e1x,e1y,eyeR,0,Math.PI*2); ctx.fill();
-    ctx.beginPath(); ctx.arc(e2x,e2y,eyeR,0,Math.PI*2); ctx.fill();
-    ctx.shadowBlur = 0;
+      if (eyeStyle === 'laser') { ctx.shadowColor='#ff0000'; ctx.shadowBlur=6; }
+      ctx.fillStyle = eyeCol;
+      ctx.beginPath(); ctx.arc(e1x,e1y,eyeR,0,Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(e2x,e2y,eyeR,0,Math.PI*2); ctx.fill();
+      ctx.shadowBlur = 0;
 
-    if (eyeStyle !== 'laser') {
-      ctx.fillStyle = pupilCol;
-      ctx.beginPath(); ctx.arc(e1x+(dx||0),e1y+(dy||0),pupilR,0,Math.PI*2); ctx.fill();
-      ctx.beginPath(); ctx.arc(e2x+(dx||0),e2y+(dy||0),pupilR,0,Math.PI*2); ctx.fill();
+      if (eyeStyle !== 'laser') {
+        ctx.fillStyle = pupilCol;
+        ctx.beginPath(); ctx.arc(e1x+(dx||0)*0.5,e1y+(dy||0)*0.5,pupilR,0,Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(e2x+(dx||0)*0.5,e2y+(dy||0)*0.5,pupilR,0,Math.PI*2); ctx.fill();
+      }
     }
 
     // ── Comida ────────────────────────────────────────────────────────────
@@ -1158,12 +1154,12 @@ function SnakeGame({ onClose, currentUser }) {
   useEffect(()=>{const f=()=>setIsMobile(window.innerWidth<700);window.addEventListener('resize',f);return()=>window.removeEventListener('resize',f);},[]);
 
   const glassPanel = {
-    background:'rgba(255,255,255,0.55)',
-    backdropFilter:'blur(60px) saturate(220%)',
-    WebkitBackdropFilter:'blur(60px) saturate(220%)',
-    border:'1.5px solid rgba(255,255,255,0.95)',
+    background:'rgba(255,255,255,0.28)',
+    backdropFilter:'blur(40px) saturate(180%)',
+    WebkitBackdropFilter:'blur(40px) saturate(180%)',
+    border:'1px solid rgba(255,255,255,0.55)',
     borderRadius:28,
-    boxShadow:'0 30px 80px rgba(0,0,0,0.08), inset 0 2px 0 rgba(255,255,255,1)',
+    boxShadow:'0 20px 60px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,0.8)',
   };
 
   return (
