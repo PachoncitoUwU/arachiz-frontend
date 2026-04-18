@@ -811,16 +811,7 @@ function SnakeGame({ onClose, currentUser }) {
   const foodEmojiRef    = useRef('🍎');
   const equippedSkinRef = useRef(null);
   
-  // Refs para SVG overlay puro
-  const snakePolyRef = useRef(null);
-  const snakeNeonRef = useRef(null);
-  const snakeHeadRef = useRef(null);
-  const snakeEye1Ref = useRef(null);
-  const snakeEye2Ref = useRef(null);
-  const snakePupil1Ref = useRef(null);
-  const snakePupil2Ref = useRef(null);
-  const snakeTrailGroupRef = useRef(null);
-  
+  // Refs para canvas puro (sin SVG overlay)
   const W = COLS*CELL, H = ROWS*CELL;
 
   // Sincronizar refs con estado para que drawGame siempre lea el valor actual
@@ -864,165 +855,116 @@ function SnakeGame({ onClose, currentUser }) {
 
   const randFood=(snake)=>{let f;do{f=[Math.floor(Math.random()*COLS),Math.floor(Math.random()*ROWS)];}while(snake.some(c=>c[0]===f[0]&&c[1]===f[1]));return f;};
 
-  const renderSvgSkinDefs = () => {
-    let fillBody = snakeColor;
-    let fillHead = snakeColor;
-    let filter = "none";
-    let eyeStyle = 'normal';
-    let hasLaser = false;
-
-    let defsRender = (
-      <>
-        {/* Filtro neón general */}
-        <filter id="neon_f" x="-20%" y="-20%" width="140%" height="140%">
-          <feGaussianBlur stdDeviation="3" result="blur1" />
-          <feGaussianBlur stdDeviation="6" result="blur2" />
-          <feMerge>
-            <feMergeNode in="blur2" />
-            <feMergeNode in="blur1" />
-            <feMergeNode in="SourceGraphic" />
-          </feMerge>
-        </filter>
-        {/* Resplandor láser rojo */}
-        <filter id="laser_f" x="-50%" y="-50%" width="200%" height="200%">
-          <feGaussianBlur stdDeviation="2" result="blur1" />
-          <feGaussianBlur stdDeviation="4" result="blur2" />
-          <feMerge>
-            <feMergeNode in="blur2" />
-            <feMergeNode in="blur1" />
-            <feMergeNode in="SourceGraphic" />
-          </feMerge>
-        </filter>
-        {/* Degradado para estilo Rainbow */}
-        <linearGradient id="rainbow_grad" gradientUnits="userSpaceOnUse" x1="0" x2={W} y1="0" y2={H}>
-          <stop offset="0%" stopColor="#ff0080" />
-          <stop offset="25%" stopColor="#ff8000" />
-          <stop offset="50%" stopColor="#ffff00" />
-          <stop offset="75%" stopColor="#00ff80" />
-          <stop offset="100%" stopColor="#0080ff" />
-        </linearGradient>
-        <radialGradient id="galaxy_grad" gradientUnits="userSpaceOnUse" cx={W/2} cy={H/2} r={Math.max(W,H)/2}>
-          <stop offset="0%" stopColor="#4a148c" />
-          <stop offset="60%" stopColor="#1a237e" />
-          <stop offset="100%" stopColor="#000000" />
-        </radialGradient>
-        <linearGradient id="gradient_grad" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2={W} y2={H}>
-          <stop offset="0%" stopColor={equippedSkin?.headColor||'#00ff88'} />
-          <stop offset="100%" stopColor={equippedSkin?.bodyColor||'#00cc6a'} />
-        </linearGradient>
-        <linearGradient id="fire_grad" gradientUnits="userSpaceOnUse" x1="0" y1={H} x2="0" y2="0">
-          <stop offset="0%" stopColor="#ff0000" />
-          <stop offset="50%" stopColor="#ff6b00" />
-          <stop offset="100%" stopColor="#ffd700" />
-        </linearGradient>
-        <linearGradient id="ice_grad" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2={W} y2={H}>
-          <stop offset="0%" stopColor="#e0f7ff" />
-          <stop offset="50%" stopColor="#7dd3fc" />
-          <stop offset="100%" stopColor="#0ea5e9" />
-        </linearGradient>
-        <linearGradient id="gold_grad" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2={W} y2={H}>
-          <stop offset="0%" stopColor="#ffd700" />
-          <stop offset="40%" stopColor="#ffb300" />
-          <stop offset="100%" stopColor="#ff8c00" />
-        </linearGradient>
-        <radialGradient id="void_grad" gradientUnits="userSpaceOnUse" cx={W/2} cy={H/2} r={Math.max(W,H)/2}>
-          <stop offset="0%" stopColor="#1a0030" />
-          <stop offset="60%" stopColor="#0d0020" />
-          <stop offset="100%" stopColor="#000000" />
-        </radialGradient>
-      </>
-    );
-      if (equippedSkin.pattern === 'rainbow')  fillBody = 'url(#rainbow_grad)';
-      else if (equippedSkin.pattern === 'galaxy')   fillBody = 'url(#galaxy_grad)';
-      else if (equippedSkin.pattern === 'gradient') fillBody = 'url(#gradient_grad)';
-      else if (equippedSkin.pattern === 'fire')     fillBody = 'url(#fire_grad)';
-      else if (equippedSkin.pattern === 'ice')      fillBody = 'url(#ice_grad)';
-      else if (equippedSkin.pattern === 'gold')     fillBody = 'url(#gold_grad)';
-      else if (equippedSkin.pattern === 'void')     fillBody = 'url(#void_grad)';
-      else if (equippedSkin.pattern === 'neon')     { fillBody = equippedSkin.bodyColor; filter = 'url(#neon_f)'; }
-      else fillBody = equippedSkin.bodyColor;
-      fillHead = equippedSkin.headColor || fillBody;
-      eyeStyle = equippedSkin.eyeStyle || 'normal';
-      hasLaser = eyeStyle === 'laser';
-    }
-
-    const eyeSize = eyeStyle === 'cute' ? 5 : 4;
-    const pupilSize = eyeStyle === 'cute' ? 3 : 2;
-    const eyeColor = hasLaser ? '#ff0000' : '#ffffff';
-    const pupilColor = eyeStyle === 'angry' ? '#ff0000' : '#000000';
-
-    return { defs: defsRender, fillBody, fillHead, filter, hasLaser, eyeSize, eyeColor, pupilSize, pupilColor };
-  };
-
-  const { defs, fillBody, fillHead, filter, hasLaser, eyeSize, eyeColor, pupilSize, pupilColor } = renderSvgSkinDefs();
-
   const drawGame=(g,ctx)=>{
-    // Fondo Liquid Glass y Transparente
     ctx.clearRect(0,0,W,H);
-    // El contenedor de HTML ya tiene liquid glass, no pintamos un fondo opaco en canvas
-    
-    // Comida
-    ctx.fillStyle = '#ff3b30';
-    ctx.font = `${CELL-4}px "Apple Color Emoji", "Segoe UI Emoji", sans-serif`;
-    ctx.textAlign="center";
-    ctx.textBaseline="middle";
-    ctx.fillText(foodEmojiRef.current, g.food[0]*CELL+CELL/2, g.food[1]*CELL+CELL/2);
-    
-    // Serpiente (Actualizar DOM de SVG)
-    if(g.snake.length > 0 && snakePolyRef.current) {
-      const ptsString = g.snake.map(p => `${p[0]*CELL+CELL/2},${p[1]*CELL+CELL/2}`).join(' ');
-      snakePolyRef.current.setAttribute('points', ptsString);
-      if (snakeNeonRef.current) snakeNeonRef.current.setAttribute('points', ptsString);
-      
-      const [headX, headY] = g.snake[0];
-      const cx = headX*CELL;
-      const cy = headY*CELL;
 
-      if (snakeHeadRef.current) {
-        snakeHeadRef.current.setAttribute('cx', cx+CELL/2);
-        snakeHeadRef.current.setAttribute('cy', cy+CELL/2);
-      }
-      
-      const [dx, dy] = g.dir;
-      let ex1, ey1, ex2, ey2;
-      if (dx === 1) { // Derecha
-        ex1=cx+16; ey1=cy+7;
-        ex2=cx+16; ey2=cy+17;
-      } else if (dx === -1) { // Izquierda
-        ex1=cx+8; ey1=cy+7;
-        ex2=cx+8; ey2=cy+17;
-      } else if (dy === 1) { // Abajo
-        ex1=cx+7; ey1=cy+16;
-        ex2=cx+17; ey2=cy+16;
-      } else { // Arriba (o inicio)
-        ex1=cx+7; ey1=cy+8;
-        ex2=cx+17; ey2=cy+8;
-      }
+    // Fondo claro y limpio
+    ctx.fillStyle='rgba(248,250,252,0.85)';
+    ctx.fillRect(0,0,W,H);
 
-      if (snakeEye1Ref.current) {
-        snakeEye1Ref.current.setAttribute('cx', ex1);
-        snakeEye1Ref.current.setAttribute('cy', ey1);
+    const skin = equippedSkinRef.current;
+    const baseColor = snakeColorRef.current;
+
+    // ── Crear gradiente según patrón ──────────────────────────────────────
+    const getBodyFill = () => {
+      if (!skin) return baseColor;
+      const p = skin.pattern;
+      if (p === 'solid') return skin.bodyColor;
+      if (p === 'gradient') {
+        const g2 = ctx.createLinearGradient(0,0,W,H);
+        g2.addColorStop(0, skin.headColor); g2.addColorStop(1, skin.bodyColor); return g2;
       }
-      if (snakeEye2Ref.current) {
-        snakeEye2Ref.current.setAttribute('cx', ex2);
-        snakeEye2Ref.current.setAttribute('cy', ey2);
+      if (p === 'rainbow') {
+        const g2 = ctx.createLinearGradient(0,0,W,0);
+        g2.addColorStop(0,'#ff0080'); g2.addColorStop(0.2,'#ff8000');
+        g2.addColorStop(0.4,'#ffff00'); g2.addColorStop(0.6,'#00ff80');
+        g2.addColorStop(0.8,'#0080ff'); g2.addColorStop(1,'#8000ff'); return g2;
       }
-      
-      if (snakePupil1Ref.current) {
-        let px1 = ex1, py1 = ey1;
-        if (dx === 1) px1 += 1; else if (dx === -1) px1 -= 1;
-        if (dy === 1) py1 += 1; else if (dy === -1) py1 -= 1;
-        snakePupil1Ref.current.setAttribute('cx', px1);
-        snakePupil1Ref.current.setAttribute('cy', py1);
+      if (p === 'galaxy') {
+        const g2 = ctx.createRadialGradient(W/2,H/2,0,W/2,H/2,Math.max(W,H)/2);
+        g2.addColorStop(0,'#c084fc'); g2.addColorStop(0.5,'#4a148c'); g2.addColorStop(1,'#000'); return g2;
       }
-      if (snakePupil2Ref.current) {
-        let px2 = ex2, py2 = ey2;
-        if (dx === 1) px2 += 1; else if (dx === -1) px2 -= 1;
-        if (dy === 1) py2 += 1; else if (dy === -1) py2 -= 1;
-        snakePupil2Ref.current.setAttribute('cx', px2);
-        snakePupil2Ref.current.setAttribute('cy', py2);
+      if (p === 'fire') {
+        const g2 = ctx.createLinearGradient(0,H,0,0);
+        g2.addColorStop(0,'#ff0000'); g2.addColorStop(0.5,'#ff6b00'); g2.addColorStop(1,'#ffd700'); return g2;
       }
+      if (p === 'ice') {
+        const g2 = ctx.createLinearGradient(0,0,W,H);
+        g2.addColorStop(0,'#e0f7ff'); g2.addColorStop(0.5,'#7dd3fc'); g2.addColorStop(1,'#0ea5e9'); return g2;
+      }
+      if (p === 'gold') {
+        const g2 = ctx.createLinearGradient(0,0,W,H);
+        g2.addColorStop(0,'#ffd700'); g2.addColorStop(0.5,'#ffb300'); g2.addColorStop(1,'#ff8c00'); return g2;
+      }
+      if (p === 'void') {
+        const g2 = ctx.createRadialGradient(W/2,H/2,0,W/2,H/2,Math.max(W,H)/2);
+        g2.addColorStop(0,'#1a0030'); g2.addColorStop(0.6,'#0d0020'); g2.addColorStop(1,'#000'); return g2;
+      }
+      if (p === 'neon') return skin.bodyColor;
+      return skin.bodyColor || baseColor;
+    };
+
+    const bodyFill = getBodyFill();
+    const headFill = skin ? skin.headColor : baseColor;
+
+    // ── Neon glow ─────────────────────────────────────────────────────────
+    if (skin?.pattern === 'neon') {
+      ctx.shadowColor = skin.bodyColor;
+      ctx.shadowBlur = 14;
     }
+
+    // ── Cuerpo (línea continua) ───────────────────────────────────────────
+    if (g.snake.length > 1) {
+      ctx.strokeStyle = bodyFill;
+      ctx.lineWidth = CELL - 5;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.beginPath();
+      ctx.moveTo(g.snake[0][0]*CELL+CELL/2, g.snake[0][1]*CELL+CELL/2);
+      for (let i=1; i<g.snake.length; i++)
+        ctx.lineTo(g.snake[i][0]*CELL+CELL/2, g.snake[i][1]*CELL+CELL/2);
+      ctx.stroke();
+    }
+
+    // ── Cabeza ────────────────────────────────────────────────────────────
+    const [hx,hy] = g.snake[0];
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = headFill;
+    ctx.beginPath();
+    ctx.arc(hx*CELL+CELL/2, hy*CELL+CELL/2, CELL/2-1, 0, Math.PI*2);
+    ctx.fill();
+
+    // ── Ojos simples y limpios ────────────────────────────────────────────
+    const [dx,dy] = g.dir;
+    const eyeOffset = 6;
+    let e1x,e1y,e2x,e2y;
+    if (dx===1)       { e1x=hx*CELL+16; e1y=hy*CELL+7;  e2x=hx*CELL+16; e2y=hy*CELL+17; }
+    else if (dx===-1) { e1x=hx*CELL+8;  e1y=hy*CELL+7;  e2x=hx*CELL+8;  e2y=hy*CELL+17; }
+    else if (dy===1)  { e1x=hx*CELL+7;  e1y=hy*CELL+16; e2x=hx*CELL+17; e2y=hy*CELL+16; }
+    else              { e1x=hx*CELL+7;  e1y=hy*CELL+8;  e2x=hx*CELL+17; e2y=hy*CELL+8;  }
+
+    const eyeStyle = skin?.eyeStyle || 'normal';
+    const eyeR = eyeStyle === 'cute' ? 4.5 : 3.5;
+    const pupilR = eyeStyle === 'cute' ? 2.5 : 2;
+    const eyeCol = eyeStyle === 'laser' ? '#ff2200' : '#fff';
+    const pupilCol = eyeStyle === 'angry' ? '#ff0000' : '#111';
+
+    if (eyeStyle === 'laser') ctx.shadowColor='#ff0000', ctx.shadowBlur=8;
+    ctx.fillStyle = eyeCol;
+    ctx.beginPath(); ctx.arc(e1x,e1y,eyeR,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(e2x,e2y,eyeR,0,Math.PI*2); ctx.fill();
+    ctx.shadowBlur = 0;
+
+    if (eyeStyle !== 'laser') {
+      ctx.fillStyle = pupilCol;
+      ctx.beginPath(); ctx.arc(e1x+(dx||0),e1y+(dy||0),pupilR,0,Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(e2x+(dx||0),e2y+(dy||0),pupilR,0,Math.PI*2); ctx.fill();
+    }
+
+    // ── Comida ────────────────────────────────────────────────────────────
+    ctx.font = `${CELL-4}px "Apple Color Emoji","Segoe UI Emoji",sans-serif`;
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(foodEmojiRef.current, g.food[0]*CELL+CELL/2, g.food[1]*CELL+CELL/2);
   };
 
   const loop=(ts)=>{
@@ -1216,16 +1158,16 @@ function SnakeGame({ onClose, currentUser }) {
   useEffect(()=>{const f=()=>setIsMobile(window.innerWidth<700);window.addEventListener('resize',f);return()=>window.removeEventListener('resize',f);},[]);
 
   const glassPanel = {
-    background:'rgba(255,255,255,0.22)',
-    backdropFilter:'blur(50px) saturate(200%)',
-    WebkitBackdropFilter:'blur(50px) saturate(200%)',
-    border:'1.5px solid rgba(255,255,255,0.85)',
+    background:'rgba(255,255,255,0.55)',
+    backdropFilter:'blur(60px) saturate(220%)',
+    WebkitBackdropFilter:'blur(60px) saturate(220%)',
+    border:'1.5px solid rgba(255,255,255,0.95)',
     borderRadius:28,
-    boxShadow:'0 30px 80px rgba(0,0,0,0.1), inset 0 2px 0 rgba(255,255,255,1)',
+    boxShadow:'0 30px 80px rgba(0,0,0,0.08), inset 0 2px 0 rgba(255,255,255,1)',
   };
 
   return (
-    <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.5)',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:200,padding:12,overflowY:'auto'}} onClick={onClose}>
+    <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.12)',backdropFilter:'blur(24px)',WebkitBackdropFilter:'blur(24px)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:200,padding:12,overflowY:'auto'}} onClick={onClose}>
       <div style={{display:'flex',flexDirection:isMobile?'column':'row',gap:12,alignItems:'flex-start',maxWidth:'98vw'}} onClick={e=>e.stopPropagation()}>
 
         {/* LB — siempre visible a la izquierda en desktop */}
@@ -1267,46 +1209,8 @@ function SnakeGame({ onClose, currentUser }) {
             </div>
           ) : (
             <>
-              <div style={{position:'relative',borderRadius:18,overflow:'hidden',border:'1.5px solid rgba(255,255,255,0.15)',boxShadow:'0 10px 30px rgba(0,0,0,0.2), inset 0 2px 16px rgba(255,255,255,0.05)',background:'rgba(255,255,255,0.02)',backdropFilter:'blur(20px)',WebkitBackdropFilter:'blur(20px)'}}>
+              <div style={{position:'relative',borderRadius:18,overflow:'hidden',border:'1.5px solid rgba(255,255,255,0.6)',boxShadow:'0 4px 20px rgba(0,0,0,0.08)'}}>
                 <canvas ref={canvasRef} width={W} height={H} style={{display:'block',maxWidth:'100%'}}/>
-                <svg width={W} height={H} style={{position:'absolute',top:0,left:0,pointerEvents:'none'}}>
-                  <defs>{defs}</defs>
-                  <g ref={snakeTrailGroupRef} />
-                  
-                  {/* SVG Snake Rendering for fidelity */}
-                  <polyline
-                    ref={snakePolyRef}
-                    fill="none"
-                    stroke={fillBody}
-                    strokeWidth={CELL - 4}
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    filter={filter}
-                  />
-                  
-                  {equippedSkin?.pattern === 'neon' && (
-                    <polyline
-                      ref={snakeNeonRef}
-                      fill="none"
-                      stroke={equippedSkin.bodyColor}
-                      strokeWidth={CELL - 10}
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  )}
-                  
-                  <circle ref={snakeHeadRef} r={CELL/2 - 1} fill={fillHead} filter={filter} />
-                  
-                  <circle ref={snakeEye1Ref} r={eyeSize} fill={eyeColor} filter={hasLaser ? "url(#laser_f)" : "none"} />
-                  <circle ref={snakeEye2Ref} r={eyeSize} fill={eyeColor} filter={hasLaser ? "url(#laser_f)" : "none"} />
-                  
-                  {!hasLaser && (
-                    <>
-                      <circle ref={snakePupil1Ref} r={pupilSize} fill={pupilColor} />
-                      <circle ref={snakePupil2Ref} r={pupilSize} fill={pupilColor} />
-                    </>
-                  )}
-                </svg>
 
                 {dead&&(
                   <button onClick={startGame}
