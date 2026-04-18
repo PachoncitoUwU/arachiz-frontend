@@ -905,8 +905,15 @@ function SnakeGame({ onClose, currentUser }) {
     const eyeStyle = skin?.eyeStyle || 'normal';
     const R = (CELL-5)/2; // radio del cuerpo
 
-    // ── Neon glow ─────────────────────────────────────────────────────────
-    if (skin?.pattern === 'neon') { ctx.shadowColor=skin.bodyColor; ctx.shadowBlur=12; }
+    // ── Aura de color (para skins con patrón especial) ────────────────────
+    if (skin && skin.pattern !== 'solid') {
+      const auraColor = skin.headColor || skin.bodyColor;
+      ctx.shadowColor = auraColor;
+      ctx.shadowBlur = 18;
+    } else if (skin?.pattern === 'neon') {
+      ctx.shadowColor = skin.bodyColor;
+      ctx.shadowBlur = 22;
+    }
 
     // ── Cuerpo + cabeza como línea continua (mismo grosor) ────────────────
     if (g.snake.length > 0) {
@@ -920,22 +927,22 @@ function SnakeGame({ onClose, currentUser }) {
         ctx.lineTo(g.snake[i][0]*CELL+CELL/2, g.snake[i][1]*CELL+CELL/2);
       ctx.stroke();
     }
+    ctx.shadowBlur = 0;
 
-    // ── Cabeza (mismo color que cuerpo, solo ojos) ────────────────────────
+    // ── Ojos (más hacia el centro, menos al frente) ───────────────────────
     if (g.snake.length > 0) {
       const [hx,hy] = g.snake[0];
-
-      // ── Ojos pequeños y limpios ──────────────────────────────────────────
       const [dx,dy] = g.dir;
+      // o = offset lateral, f = offset hacia adelante (reducido para que queden más atrás)
+      const o = 4, f = 2;
       let e1x,e1y,e2x,e2y;
-      const o = 5; // offset desde el centro
-      if (dx===1)       { e1x=hx*CELL+CELL/2+o; e1y=hy*CELL+CELL/2-o; e2x=hx*CELL+CELL/2+o; e2y=hy*CELL+CELL/2+o; }
-      else if (dx===-1) { e1x=hx*CELL+CELL/2-o; e1y=hy*CELL+CELL/2-o; e2x=hx*CELL+CELL/2-o; e2y=hy*CELL+CELL/2+o; }
-      else if (dy===1)  { e1x=hx*CELL+CELL/2-o; e1y=hy*CELL+CELL/2+o; e2x=hx*CELL+CELL/2+o; e2y=hy*CELL+CELL/2+o; }
-      else              { e1x=hx*CELL+CELL/2-o; e1y=hy*CELL+CELL/2-o; e2x=hx*CELL+CELL/2+o; e2y=hy*CELL+CELL/2-o; }
+      if (dx===1)       { e1x=hx*CELL+CELL/2+f; e1y=hy*CELL+CELL/2-o; e2x=hx*CELL+CELL/2+f; e2y=hy*CELL+CELL/2+o; }
+      else if (dx===-1) { e1x=hx*CELL+CELL/2-f; e1y=hy*CELL+CELL/2-o; e2x=hx*CELL+CELL/2-f; e2y=hy*CELL+CELL/2+o; }
+      else if (dy===1)  { e1x=hx*CELL+CELL/2-o; e1y=hy*CELL+CELL/2+f; e2x=hx*CELL+CELL/2+o; e2y=hy*CELL+CELL/2+f; }
+      else              { e1x=hx*CELL+CELL/2-o; e1y=hy*CELL+CELL/2-f; e2x=hx*CELL+CELL/2+o; e2y=hy*CELL+CELL/2-f; }
 
-      const eyeR = eyeStyle === 'cute' ? 3.5 : 2.5;
-      const pupilR = eyeStyle === 'cute' ? 2 : 1.5;
+      const eyeR = eyeStyle === 'cute' ? 3 : 2.5;
+      const pupilR = eyeStyle === 'cute' ? 1.8 : 1.4;
       const eyeCol = eyeStyle === 'laser' ? '#ff2200' : '#fff';
       const pupilCol = eyeStyle === 'angry' ? '#ff0000' : '#111';
 
@@ -947,8 +954,8 @@ function SnakeGame({ onClose, currentUser }) {
 
       if (eyeStyle !== 'laser') {
         ctx.fillStyle = pupilCol;
-        ctx.beginPath(); ctx.arc(e1x+(dx||0)*0.5,e1y+(dy||0)*0.5,pupilR,0,Math.PI*2); ctx.fill();
-        ctx.beginPath(); ctx.arc(e2x+(dx||0)*0.5,e2y+(dy||0)*0.5,pupilR,0,Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(e1x,e1y,pupilR,0,Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(e2x,e2y,pupilR,0,Math.PI*2); ctx.fill();
       }
     }
 
@@ -1149,12 +1156,12 @@ function SnakeGame({ onClose, currentUser }) {
   useEffect(()=>{const f=()=>setIsMobile(window.innerWidth<700);window.addEventListener('resize',f);return()=>window.removeEventListener('resize',f);},[]);
 
   const glassPanel = {
-    background:'rgba(255,255,255,0.15)',
-    backdropFilter:'blur(20px)',
-    WebkitBackdropFilter:'blur(20px)',
-    border:'1px solid rgba(255,255,255,0.4)',
+    background:'rgba(255,255,255,0.08)',
+    backdropFilter:'blur(12px)',
+    WebkitBackdropFilter:'blur(12px)',
+    border:'1px solid rgba(255,255,255,0.3)',
     borderRadius:28,
-    boxShadow:'0 8px 32px rgba(0,0,0,0.06)',
+    boxShadow:'0 4px 24px rgba(0,0,0,0.05), inset 0 1px 0 rgba(255,255,255,0.6)',
   };
 
   return (
