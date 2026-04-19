@@ -1,11 +1,19 @@
-import React, { useEffect, useState, useContext } from 'react';
+import React, { useEffect, useState, useContext, lazy, Suspense } from 'react';
 import { AuthContext } from '../../context/AuthContext';
 import { Link } from 'react-router-dom';
 import { BookOpen, Clock, FileText, AlertTriangle, ArrowRight, CheckCircle, XCircle, User } from 'lucide-react';
 import { useToast } from '../../context/ToastContext';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import fetchApi from '../../services/api';
 import StatCard from '../../components/StatCard';
+
+// Lazy load recharts para reducir bundle inicial
+const BarChart = lazy(() => import('recharts').then(m => ({ default: m.BarChart })));
+const Bar = lazy(() => import('recharts').then(m => ({ default: m.Bar })));
+const XAxis = lazy(() => import('recharts').then(m => ({ default: m.XAxis })));
+const YAxis = lazy(() => import('recharts').then(m => ({ default: m.YAxis })));
+const CartesianGrid = lazy(() => import('recharts').then(m => ({ default: m.CartesianGrid })));
+const Tooltip = lazy(() => import('recharts').then(m => ({ default: m.Tooltip })));
+const ResponsiveContainer = lazy(() => import('recharts').then(m => ({ default: m.ResponsiveContainer })));
 
 function CustomTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null;
@@ -173,16 +181,22 @@ export default function AprendizDashboard() {
           {chartData.length > 0 && (
             <div className="card dark:bg-gray-900 dark:border-gray-800">
               <h2 className="font-bold text-gray-900 dark:text-white mb-4">Asistencia por Materia</h2>
-              <ResponsiveContainer width="100%" height={200}>
-                <BarChart data={chartData} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                  <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#9ca3af' }} />
-                  <YAxis tick={{ fontSize: 10, fill: '#9ca3af' }} />
-                  <Tooltip content={<CustomTooltip />} />
-                  <Bar dataKey="Presentes" fill="#34A853" radius={[4,4,0,0]} />
-                  <Bar dataKey="Ausentes"  fill="#EA4335" radius={[4,4,0,0]} />
-                </BarChart>
-              </ResponsiveContainer>
+              <Suspense fallback={
+                <div className="flex items-center justify-center h-[200px]">
+                  <div className="w-6 h-6 border-2 border-[#34A853] border-t-transparent rounded-full animate-spin"/>
+                </div>
+              }>
+                <ResponsiveContainer width="100%" height={200}>
+                  <BarChart data={chartData} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                    <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#9ca3af' }} />
+                    <YAxis tick={{ fontSize: 10, fill: '#9ca3af' }} />
+                    <Tooltip content={<CustomTooltip />} />
+                    <Bar dataKey="Presentes" fill="#34A853" radius={[4,4,0,0]} />
+                    <Bar dataKey="Ausentes"  fill="#EA4335" radius={[4,4,0,0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </Suspense>
             </div>
           )}
 

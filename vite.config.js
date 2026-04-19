@@ -20,27 +20,33 @@ export default defineConfig({
     port: 5173,
   },
   build: {
-    // Optimizaciones para reducir tamaño del bundle
     minify: 'terser',
     terserOptions: {
       compress: {
         drop_console: true,
         drop_debugger: true,
+        passes: 2,
       },
+      mangle: true,
     },
     rollupOptions: {
       output: {
-        manualChunks: {
-          // Separar librerías grandes en chunks
-          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
-          'ui-vendor': ['tailwindcss'],
+        manualChunks(id) {
+          // Separar node_modules en chunks individuales
+          if (id.includes('node_modules')) {
+            if (id.includes('recharts')) return 'recharts';
+            if (id.includes('react-router')) return 'react-router';
+            if (id.includes('socket.io')) return 'socket';
+            if (id.includes('react') || id.includes('react-dom')) return 'react';
+            if (id.includes('@dnd-kit')) return 'dnd-kit';
+            return 'vendor';
+          }
         },
       },
     },
-    // Aumentar el límite de warnings
-    chunkSizeWarningLimit: 1000,
-    // Reportar tamaño comprimido
+    chunkSizeWarningLimit: 600,
     reportCompressedSize: true,
+    cssCodeSplit: true,
   },
   // Optimizaciones de dependencias
   optimizeDeps: {

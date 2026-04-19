@@ -1,8 +1,10 @@
 node_modules
 .git
 .env.local
-.env.*.local
-dist
-build
+.env.development
 *.log
 .DS_Store
+src/**/*.test.js
+src/**/*.test.jsx
+*.md
+docs
