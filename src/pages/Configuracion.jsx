@@ -10,6 +10,7 @@ import MemoryFlash  from '../games/MemoryFlash';
 import ReactionTime from '../games/ReactionTime';
 import WordleGame   from '../games/WordleGame';
 import SnakeShop    from '../components/SnakeShop';
+import { drawPremiumEyes, getRainbowColor, drawSegment3D, applyNeonGlow, clearGlow } from '../utils/snakeSkinRenderer';
 
 const API_BASE = import.meta.env.VITE_SOCKET_URL || 'http://localhost:3000';
 
@@ -929,7 +930,7 @@ function SnakeGame({ onClose, currentUser }) {
     }
     ctx.shadowBlur = 0;
 
-    // ── Ojos con expresión según rareza/eyeStyle ─────────────────────────
+    // ── Ojos Premium con expresión según rareza/eyeStyle ─────────────────────────
     if (g.snake.length > 0) {
       const [hx,hy] = g.snake[0];
       const [dx,dy] = g.dir;
@@ -941,65 +942,8 @@ function SnakeGame({ onClose, currentUser }) {
       else if (dy===1)  { e1x=cx-o; e1y=cy+f; e2x=cx+o; e2y=cy+f; }
       else              { e1x=cx-o; e1y=cy-f; e2x=cx+o; e2y=cy-f; }
 
-      if (eyeStyle === 'cute') {
-        // 😊 Ojos grandes y redondos — skins baratas/comunes
-        ctx.fillStyle = '#fff';
-        ctx.beginPath(); ctx.arc(e1x,e1y,3.5,0,Math.PI*2); ctx.fill();
-        ctx.beginPath(); ctx.arc(e2x,e2y,3.5,0,Math.PI*2); ctx.fill();
-        // Pupila con brillo
-        ctx.fillStyle = '#222';
-        ctx.beginPath(); ctx.arc(e1x,e1y,2,0,Math.PI*2); ctx.fill();
-        ctx.beginPath(); ctx.arc(e2x,e2y,2,0,Math.PI*2); ctx.fill();
-        // Brillo blanco
-        ctx.fillStyle = '#fff';
-        ctx.beginPath(); ctx.arc(e1x+0.8,e1y-0.8,0.7,0,Math.PI*2); ctx.fill();
-        ctx.beginPath(); ctx.arc(e2x+0.8,e2y-0.8,0.7,0,Math.PI*2); ctx.fill();
-
-      } else if (eyeStyle === 'angry') {
-        // 😠 Ojos con cejas fruncidas — skins épicas
-        ctx.fillStyle = '#fff';
-        ctx.beginPath(); ctx.arc(e1x,e1y,3,0,Math.PI*2); ctx.fill();
-        ctx.beginPath(); ctx.arc(e2x,e2y,3,0,Math.PI*2); ctx.fill();
-        ctx.fillStyle = '#cc0000';
-        ctx.beginPath(); ctx.arc(e1x,e1y,1.8,0,Math.PI*2); ctx.fill();
-        ctx.beginPath(); ctx.arc(e2x,e2y,1.8,0,Math.PI*2); ctx.fill();
-        // Cejas fruncidas (líneas diagonales)
-        ctx.strokeStyle = '#fff';
-        ctx.lineWidth = 1.2;
-        ctx.lineCap = 'round';
-        if (dx===1||dx===-1) {
-          ctx.beginPath(); ctx.moveTo(e1x-2,e1y-3.5); ctx.lineTo(e1x+2,e1y-2.5); ctx.stroke();
-          ctx.beginPath(); ctx.moveTo(e2x-2,e2y+2.5); ctx.lineTo(e2x+2,e2y+3.5); ctx.stroke();
-        } else {
-          ctx.beginPath(); ctx.moveTo(e1x-3.5,e1y-2); ctx.lineTo(e1x-2.5,e1y+2); ctx.stroke();
-          ctx.beginPath(); ctx.moveTo(e2x+2.5,e2y-2); ctx.lineTo(e2x+3.5,e2y+2); ctx.stroke();
-        }
-
-      } else if (eyeStyle === 'laser') {
-        // 🔴 Ojos láser — skins míticas/legendarias
-        ctx.shadowColor = '#ff0000'; ctx.shadowBlur = 10;
-        ctx.fillStyle = '#ff0000';
-        ctx.beginPath(); ctx.arc(e1x,e1y,3,0,Math.PI*2); ctx.fill();
-        ctx.beginPath(); ctx.arc(e2x,e2y,3,0,Math.PI*2); ctx.fill();
-        ctx.fillStyle = '#ff6600';
-        ctx.beginPath(); ctx.arc(e1x,e1y,1.5,0,Math.PI*2); ctx.fill();
-        ctx.beginPath(); ctx.arc(e2x,e2y,1.5,0,Math.PI*2); ctx.fill();
-        // Rayos láser
-        ctx.strokeStyle = 'rgba(255,0,0,0.6)'; ctx.lineWidth = 1;
-        const laserLen = 6;
-        ctx.beginPath(); ctx.moveTo(e1x+dx*3,e1y+dy*3); ctx.lineTo(e1x+dx*(3+laserLen),e1y+dy*(3+laserLen)); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(e2x+dx*3,e2y+dy*3); ctx.lineTo(e2x+dx*(3+laserLen),e2y+dy*(3+laserLen)); ctx.stroke();
-        ctx.shadowBlur = 0;
-
-      } else {
-        // 😐 Ojos normales — skins raras/default
-        ctx.fillStyle = '#fff';
-        ctx.beginPath(); ctx.arc(e1x,e1y,2.8,0,Math.PI*2); ctx.fill();
-        ctx.beginPath(); ctx.arc(e2x,e2y,2.8,0,Math.PI*2); ctx.fill();
-        ctx.fillStyle = '#222';
-        ctx.beginPath(); ctx.arc(e1x,e1y,1.5,0,Math.PI*2); ctx.fill();
-        ctx.beginPath(); ctx.arc(e2x,e2y,1.5,0,Math.PI*2); ctx.fill();
-      }
+      // Usar la función premium de renderizado de ojos
+      drawPremiumEyes(ctx, e1x, e1y, e2x, e2y, eyeStyle);
     }
 
     // ── Comida ────────────────────────────────────────────────────────────
