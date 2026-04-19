@@ -43,4 +43,31 @@ export default defineConfig({
     host: true,      // escucha en 0.0.0.0 — accesible desde celular en la misma WiFi
     port: 5173,
   },
+  build: {
+    // Optimizaciones para reducir tamaño del bundle
+    minify: 'terser',
+    terserOptions: {
+      compress: {
+        drop_console: true,
+        drop_debugger: true,
+      },
+    },
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // Separar librerías grandes en chunks
+          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+          'ui-vendor': ['tailwindcss'],
+        },
+      },
+    },
+    // Aumentar el límite de warnings
+    chunkSizeWarningLimit: 1000,
+    // Reportar tamaño comprimido
+    reportCompressedSize: true,
+  },
+  // Optimizaciones de dependencias
+  optimizeDeps: {
+    include: ['react', 'react-dom', 'react-router-dom'],
+  },
 })
