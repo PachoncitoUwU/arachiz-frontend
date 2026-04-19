@@ -9,24 +9,24 @@ import {
 } from 'lucide-react';
 
 const INSTRUCTOR_LINKS = [
-  { to: '/instructor/dashboard', icon: LayoutDashboard, labelKey: 'dashboard' },
-  { to: '/instructor/fichas', icon: Users, labelKey: 'fichas' },
-  { to: '/instructor/materias', icon: BookOpen, labelKey: 'materias' },
-  { to: '/instructor/horario', icon: Calendar, labelKey: 'horario' },
-  { to: '/instructor/asistencia', icon: Clock, labelKey: 'asistencia' },
-  { to: '/instructor/excusas', icon: FileText, labelKey: 'excusas' },
+  { to: '/instructor/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+  { to: '/instructor/fichas', icon: Users, label: 'Fichas' },
+  { to: '/instructor/materias', icon: BookOpen, label: 'Materias' },
+  { to: '/instructor/horario', icon: Calendar, label: 'Horario' },
+  { to: '/instructor/asistencia', icon: Clock, label: 'Asistencia' },
+  { to: '/instructor/excusas', icon: FileText, label: 'Excusas' },
 ];
 
 const APRENDIZ_LINKS = [
-  { to: '/aprendiz/dashboard', icon: LayoutDashboard, labelKey: 'dashboard' },
-  { to: '/aprendiz/materias', icon: BookOpen, labelKey: 'materias' },
-  { to: '/aprendiz/horario', icon: Calendar, labelKey: 'horario' },
-  { to: '/aprendiz/asistencia', icon: Clock, labelKey: 'asistencia' },
-  { to: '/aprendiz/excusas', icon: FileText, labelKey: 'excusas' },
+  { to: '/aprendiz/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+  { to: '/aprendiz/materias', icon: BookOpen, label: 'Materias' },
+  { to: '/aprendiz/horario', icon: Calendar, label: 'Horario' },
+  { to: '/aprendiz/asistencia', icon: Clock, label: 'Asistencia' },
+  { to: '/aprendiz/excusas', icon: FileText, label: 'Excusas' },
 ];
 
 function SidebarContent({ links, user, logout, onClose, configPath }) {
-  const { settings, toggleDark, t } = useSettings();
+  const { settings, toggleDark } = useSettings();
 
   const initials = user?.fullName
     ? user.fullName.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase()
@@ -57,7 +57,7 @@ function SidebarContent({ links, user, logout, onClose, configPath }) {
 
       {/* Nav */}
       <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
-        {links.map(({ to, icon: Icon, labelKey }) => (
+        {links.map(({ to, icon: Icon, label }) => (
           <NavLink
             key={to}
             to={to}
@@ -69,7 +69,7 @@ function SidebarContent({ links, user, logout, onClose, configPath }) {
             }
           >
             <Icon size={18} />
-            <span>{t('sidebar', labelKey)}</span>
+            <span>{label}</span>
             <ChevronRight size={14} className="ml-auto opacity-30" />
           </NavLink>
         ))}
@@ -87,7 +87,7 @@ function SidebarContent({ links, user, logout, onClose, configPath }) {
           }
         >
           <Settings size={18} />
-          <span>{t('sidebar', 'settings')}</span>
+          <span>Configuración</span>
           <ChevronRight size={14} className="ml-auto opacity-30" />
         </NavLink>
 
@@ -110,7 +110,7 @@ function SidebarContent({ links, user, logout, onClose, configPath }) {
           className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors font-medium"
         >
           <LogOut size={16} />
-          {t('sidebar', 'logout')}
+          Cerrar sesión
         </button>
       </div>
     </div>

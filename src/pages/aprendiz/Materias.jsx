@@ -3,7 +3,6 @@ import fetchApi from '../../services/api';
 import PageHeader from '../../components/PageHeader';
 import EmptyState from '../../components/EmptyState';
 import { BookOpen, User } from 'lucide-react';
-import { useSettings } from '../../context/SettingsContext';
 
 const COLORES = [
   { bg: 'bg-blue-50',   icon: 'text-[#4285F4]',  border: 'border-blue-100',   accent: '#4285F4' },
@@ -13,10 +12,10 @@ const COLORES = [
   { bg: 'bg-red-50',    icon: 'text-[#EA4335]',  border: 'border-red-100',    accent: '#EA4335' },
   { bg: 'bg-pink-50',   icon: 'text-pink-500',   border: 'border-pink-100',   accent: '#ec4899' },
 ];
+
 export default function AprendizMaterias() {
   const [materias, setMaterias] = useState([]);
   const [loading, setLoading]   = useState(true);
-  const { t } = useSettings();
 
   useEffect(() => {
     fetchApi('/materias/my-materias')
@@ -34,14 +33,14 @@ export default function AprendizMaterias() {
   return (
     <div className="animate-fade-in">
       <PageHeader
-        title={t('subjects.title')}
-        subtitle={t('subjects.subtitle').replace('{count}', materias.length)}
+        title="Mis Materias"
+        subtitle={`${materias.length} materia${materias.length !== 1 ? 's' : ''} en tu ficha`}
       />
 
       {materias.length === 0 ? (
         <div className="card">
-          <EmptyState icon={<BookOpen size={32}/>} title={t('subjects.emptyTitle')}
-            description={t('subjects.emptyDesc')} />
+          <EmptyState icon={<BookOpen size={32}/>} title="Sin materias"
+            description="Aún no hay materias registradas en tu ficha. Consulta con tu instructor." />
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -64,7 +63,7 @@ export default function AprendizMaterias() {
                   </div>
                   <div className="flex gap-1">
                     <span className={`badge ${m.tipo === 'Técnica' ? 'badge-info' : 'badge-gray'}`}>{m.tipo}</span>
-                    {hasActive && <span className="badge badge-success">{t('subjects.active')}</span>}
+                    {hasActive && <span className="badge badge-success">Activa</span>}
                   </div>
                 </div>
                 <h3 className="font-bold text-gray-900 mb-1">{m.nombre}</h3>
@@ -74,7 +73,7 @@ export default function AprendizMaterias() {
                 {totalSesiones > 0 && (
                   <div className="mb-3">
                     <div className="flex justify-between text-xs text-gray-500 mb-1">
-                      <span>{t('subjects.attendance')}</span>
+                      <span>Asistencia</span>
                       <span className="font-semibold">{pct}%</span>
                     </div>
                     <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
@@ -86,11 +85,11 @@ export default function AprendizMaterias() {
                 <div className="grid grid-cols-2 gap-2 pt-3 border-t border-gray-100">
                   <div className="text-center">
                     <p className="text-lg font-bold text-gray-800">{totalSesiones}</p>
-                    <p className="text-xs text-gray-400">{t('subjects.sessions')}</p>
+                    <p className="text-xs text-gray-400">Sesiones</p>
                   </div>
                   <div className="text-center">
                     <p className="text-lg font-bold" style={{ color: col.accent }}>{misPresencias}</p>
-                    <p className="text-xs text-gray-400">{t('subjects.attendances')}</p>
+                    <p className="text-xs text-gray-400">Asistencias</p>
                   </div>
                 </div>
               </div>
